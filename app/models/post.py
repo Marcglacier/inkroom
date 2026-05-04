@@ -1,4 +1,3 @@
-# post.py
 from datetime import datetime
 from app.extensions import db
 
@@ -10,7 +9,8 @@ class Post(db.Model):
 
     title = db.Column(
         db.String(200),
-        nullable=False
+        nullable=False,
+        index=True
     )
 
     content = db.Column(
@@ -20,14 +20,23 @@ class Post(db.Model):
 
     author_id = db.Column(
         db.Integer,
-        db.ForeignKey("users.id"),
+        db.ForeignKey("users.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True
+    )
+
+    # Cached like counter (important for performance)
+    likes_count = db.Column(
+        db.Integer,
+        default=0,
         nullable=False
     )
 
     created_at = db.Column(
         db.DateTime,
         default=datetime.utcnow,
-        nullable=False
+        nullable=False,
+        index=True
     )
 
     updated_at = db.Column(

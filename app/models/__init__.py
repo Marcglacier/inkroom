@@ -8,6 +8,7 @@ from .message import Message
 from .chat_room import ChatRoom
 from .like import Like
 from .notification import Notification
+from .post_like import PostLike
 
 __all__ = [
     "User",
@@ -18,4 +19,5 @@ __all__ = [
     "ChatRoom",
     "Like",
     "Notification",
+    "PostLike"
 ]
