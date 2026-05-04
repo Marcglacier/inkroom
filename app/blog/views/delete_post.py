@@ -3,8 +3,7 @@ from flask.views import MethodView
 from flask import jsonify
 from flask_jwt_extended import jwt_required, get_jwt_identity
 
-from app.extensions import db
-from app.models.post import Post
+from app.services.post_service import delete_post
 
 
 class DeletePostAPI(MethodView):
@@ -12,12 +11,12 @@ class DeletePostAPI(MethodView):
     @jwt_required()
     def delete(self, post_id):
 
-        post = Post.query.get_or_404(post_id)
+        success, error, status = delete_post(
+            post_id,
+            int(get_jwt_identity())
+        )
 
-        if post.author_id != int(get_jwt_identity()):
-            return jsonify({"error": "Not authorized"}), 403
-
-        db.session.delete(post)
-        db.session.commit()
+        if error:
+            return jsonify({"error": error}), status
 
         return jsonify({"message": "Post deleted"})
