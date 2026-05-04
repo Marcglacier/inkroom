@@ -1,0 +1,13 @@
+# app/extensions.py
+
+from flask_sqlalchemy import SQLAlchemy
+from flask_migrate import Migrate
+from flask_jwt_extended import JWTManager
+from flask_socketio import SocketIO
+from authlib.integrations.flask_client import OAuth
+
+db = SQLAlchemy()
+migrate = Migrate()
+jwt = JWTManager()
+socketio = SocketIO(cors_allowed_origins="*")
+oauth = OAuth()
