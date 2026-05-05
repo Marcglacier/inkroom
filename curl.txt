@@ -1,0 +1,12 @@
+login
+
+curl -X POST http://127.0.0.1:5000/api/auth/login \
+-H "Content-Type: application/json" \
+-d '{
+"email": "mar@test.com",
+"password": "password123"
+}'
+
+
+export TOKEN=""
+echo $TOKEN

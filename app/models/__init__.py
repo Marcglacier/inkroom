@@ -9,6 +9,8 @@ from .chat_room import ChatRoom
 from .like import Like
 from .notification import Notification
 from .post_like import PostLike
+from .follow import Follow
+from .profile import Profile
 
 __all__ = [
     "User",
@@ -19,5 +21,7 @@ __all__ = [
     "ChatRoom",
     "Like",
     "Notification",
-    "PostLike"
+    "PostLike",
+    "Follow",
+    "Profile"
 ]
