@@ -1,40 +1,40 @@
 # app/auth/views/reset_password.py
-
 from flask.views import MethodView
 from flask import request, jsonify
-from itsdangerous import URLSafeTimedSerializer, BadSignature, SignatureExpired
+from datetime import datetime
 
 from app.extensions import db
 from app.models.user import User
-from flask import current_app
 
 
 class ResetPasswordAPI(MethodView):
 
     def post(self):
-        data = request.get_json() or {}
+
+        data = request.get_json()
 
         token = data.get("token")
-        password = data.get("password")
+        new_password = data.get("password")
 
-        if not token or not password:
+        if not token or not new_password:
             return jsonify({"error": "Token and password required"}), 400
 
-        serializer = URLSafeTimedSerializer(current_app.config["SECRET_KEY"])
-
-        try:
-            email = serializer.loads(token, salt="reset-password", max_age=3600)
-        except SignatureExpired:
-            return jsonify({"error": "Token expired"}), 400
-        except BadSignature:
-            return jsonify({"error": "Invalid token"}), 400
-
-        user = User.query.filter_by(email=email).first()
+        user = User.query.filter_by(reset_token=token).first()
 
         if not user:
-            return jsonify({"error": "User not found"}), 404
+            return jsonify({"error": "Invalid token"}), 400
 
-        user.set_password(password)
+        if user.reset_token_expiry < datetime.utcnow():
+            return jsonify({"error": "Token expired"}), 400
+
+        user.set_password(new_password)
+
+        # invalidate token after use
+        user.reset_token = None
+        user.reset_token_expiry = None
+
         db.session.commit()
 
-        return jsonify({"message": "Password reset successful"})
+        return jsonify({
+            "message": "Password successfully reset"
+        }), 200

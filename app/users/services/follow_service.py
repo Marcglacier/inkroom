@@ -1,63 +1,167 @@
-# app/services/follow_service.py
+import logging
 from app.extensions import db
 from app.models.follow import Follow
+from app.models.follow_request import FollowRequest
+from app.models.user import User
+
+log = logging.getLogger(__name__)
 
 
 class FollowService:
 
+    # =========================
+    # FOLLOW
+    # =========================
     @staticmethod
-    def follow_user(follower_id, following_id):
+    def follow_user(current_user_id, target_user_id):
 
-        if follower_id == following_id:
-            raise ValueError("You cannot follow yourself")
+        if current_user_id == target_user_id:
+            return {"error": "Cannot follow yourself"}, 400
 
-        existing = Follow.query.filter_by(
-            follower_id=follower_id,
-            following_id=following_id
+        user = User.query.get(target_user_id)
+        if not user:
+            return {"error": "User not found"}, 404
+
+        # already following check
+        existing_follow = Follow.query.filter_by(
+            follower_id=current_user_id,
+            following_id=target_user_id
         ).first()
 
-        if existing:
-            return False
+        if existing_follow:
+            return {
+                "message": "Already following",
+                "status": "following",
+                "follower_id": current_user_id,
+                "following_id": target_user_id
+            }
 
-        follow = Follow(
-            follower_id=follower_id,
-            following_id=following_id
-        )
+        # =========================
+        # PRIVATE → REQUEST FLOW
+        # =========================
+        if user.is_private:
 
-        db.session.add(follow)
+            existing_req = FollowRequest.query.filter_by(
+                requester_id=current_user_id,
+                target_id=target_user_id
+            ).first()
+
+            if existing_req:
+                return {
+                    "message": "Request already sent",
+                    "status": "requested",
+                    "follower_id": current_user_id,
+                    "following_id": target_user_id
+                }
+
+            db.session.add(FollowRequest(
+                requester_id=current_user_id,
+                target_id=target_user_id
+            ))
+            db.session.commit()
+
+            return {
+                "message": "Follow request sent",
+                "status": "requested",
+                "follower_id": current_user_id,
+                "following_id": target_user_id
+            }
+
+        # =========================
+        # PUBLIC → DIRECT FOLLOW
+        # =========================
+        db.session.add(Follow(
+            follower_id=current_user_id,
+            following_id=target_user_id
+        ))
         db.session.commit()
 
-        return True
+        return {
+            "message": "User followed",
+            "status": "following",
+            "follower_id": current_user_id,
+            "following_id": target_user_id
+        }
 
-
+    # =========================
+    # UNFOLLOW
+    # =========================
     @staticmethod
-    def unfollow_user(follower_id, following_id):
+    def unfollow_user(current_user_id, target_user_id):
 
         follow = Follow.query.filter_by(
-            follower_id=follower_id,
-            following_id=following_id
+            follower_id=current_user_id,
+            following_id=target_user_id
         ).first()
 
         if not follow:
-            return False
+            return {"error": "Not following"}, 400
 
         db.session.delete(follow)
         db.session.commit()
 
-        return True
+        return {
+            "message": "User unfollowed",
+            "status": "unfollowed",
+            "follower_id": current_user_id,
+            "following_id": target_user_id
+        }
 
-
+    # =========================
+    # ACCEPT FOLLOW REQUEST
+    # =========================
     @staticmethod
-    def get_followers(user_id):
+    def accept_follow(target_user_id, requester_id):
 
-        return Follow.query.filter_by(
-            following_id=user_id
-        ).all()
+        req = FollowRequest.query.filter_by(
+            requester_id=requester_id,
+            target_id=target_user_id
+        ).first()
 
+        if not req:
+            return {"error": "Request not found"}, 404
 
+        follow = Follow.query.filter_by(
+            follower_id=requester_id,
+            following_id=target_user_id
+        ).first()
+
+        if not follow:
+            db.session.add(Follow(
+                follower_id=requester_id,
+                following_id=target_user_id
+            ))
+
+        db.session.delete(req)
+        db.session.commit()
+
+        return {
+            "message": "Follow request accepted",
+            "status": "following",
+            "follower_id": requester_id,
+            "following_id": target_user_id
+        }
+
+    # =========================
+    # REJECT FOLLOW REQUEST
+    # =========================
     @staticmethod
-    def get_following(user_id):
+    def reject_follow(target_user_id, requester_id):
 
-        return Follow.query.filter_by(
-            follower_id=user_id
-        ).all()
+        req = FollowRequest.query.filter_by(
+            requester_id=requester_id,
+            target_id=target_user_id
+        ).first()
+
+        if not req:
+            return {"error": "Request not found"}, 404
+
+        db.session.delete(req)
+        db.session.commit()
+
+        return {
+            "message": "Follow request rejected",
+            "status": "rejected",
+            "follower_id": requester_id,
+            "following_id": target_user_id
+        }

@@ -13,7 +13,6 @@ class GetProfileAPI(MethodView):
 
         viewer_id = int(get_jwt_identity())
 
-        profile = get_profile(viewer_id, user_id)
+        profile_data = get_profile(viewer_id, user_id)
 
-        return jsonify(profile)
-    
+        return jsonify(profile_data)

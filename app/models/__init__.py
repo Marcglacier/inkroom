@@ -11,6 +11,7 @@ from .notification import Notification
 from .post_like import PostLike
 from .follow import Follow
 from .profile import Profile
+from .follow_request import FollowRequest
 
 __all__ = [
     "User",
@@ -23,5 +24,6 @@ __all__ = [
     "Notification",
     "PostLike",
     "Follow",
-    "Profile"
+    "Profile",
+    "FollowRequest"
 ]

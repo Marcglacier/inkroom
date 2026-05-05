@@ -16,38 +16,66 @@ def get_profile(viewer_id, user_id):
         db.session.add(profile)
         db.session.commit()
 
-    followers_count = Follow.query.filter_by(following_id=user_id).count()
-    following_count = Follow.query.filter_by(follower_id=user_id).count()
+    # -------------------------
+    # COUNTS (ONLY accepted follows)
+    # -------------------------
+    followers_count = Follow.query.filter_by(
+        following_id=user_id,
+        status="following"
+    ).count()
 
-    is_following = False
+    following_count = Follow.query.filter_by(
+        follower_id=user_id,
+        status="following"
+    ).count()
+
+    # -------------------------
+    # RELATIONSHIP
+    # -------------------------
+    follow_rel = None
 
     if viewer_id != user_id:
-        is_following = Follow.query.filter_by(
+        follow_rel = Follow.query.filter_by(
             follower_id=viewer_id,
             following_id=user_id
-        ).first() is not None
+        ).first()
 
-    relationship = "self"
+    if viewer_id == user_id:
+        relationship = "self"
+    elif not follow_rel:
+        relationship = "none"
+    else:
+        relationship = follow_rel.status  # following | requested
 
-    if viewer_id != user_id:
-        relationship = "following" if is_following else "not_following"
+    is_following = relationship == "following"
+    is_requested = relationship == "requested"
 
-    profile_data = {
+    # -------------------------
+    # BASE PROFILE
+    # -------------------------
+    data = {
         "id": user.id,
         "username": user.username,
         "bio": profile.bio,
+        "location": profile.location,
         "followers": followers_count,
         "following": following_count,
         "joined_at": user.created_at,
+        "is_private": profile.is_private,
         "relationship": relationship,
-        "is_private": profile.is_private
+        "is_following": is_following,
+        "is_requested": is_requested,
+        "can_message": is_following
     }
 
-    # Hide details if private and not following
+    # -------------------------
+    # PRIVACY RULES
+    # -------------------------
     if profile.is_private and not is_following and viewer_id != user_id:
-        profile_data.pop("bio")
+        data["bio"] = None
+        data["visibility"] = "limited"
 
-    return profile_data
+    return data
 
 
 def update_profile(user_id, data):

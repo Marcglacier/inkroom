@@ -11,22 +11,32 @@ class FollowUserAPI(MethodView):
     @jwt_required()
     def post(self, user_id):
 
-        follower_id = int(get_jwt_identity())
+        current_user_id = int(get_jwt_identity())
 
-        try:
-            created = FollowService.follow_user(
-                follower_id,
-                user_id
-            )
+        result = FollowService.follow_user(
+            current_user_id,
+            user_id
+        )
 
-            if not created:
-                return jsonify({
-                    "message": "Already following"
-                }), 200
+        # =========================
+        # ERROR HANDLING (SERVICE RETURNS TUPLES)
+        # =========================
+        if isinstance(result, tuple):
+            data, code = result
+            return jsonify(data), code
 
-            return jsonify({
-                "message": "User followed"
-            }), 201
+        # =========================
+        # RESPONSE STATUS LOGIC
+        # =========================
+        status = result.get("status")
 
-        except ValueError as e:
-            return jsonify({"error": str(e)}), 400
+        if status == "requested":
+            return jsonify(result), 202   # accepted for processing
+
+        if status == "following":
+            return jsonify(result), 201   # created relationship
+
+        if "error" in result:
+            return jsonify(result), 400
+
+        return jsonify(result), 200
