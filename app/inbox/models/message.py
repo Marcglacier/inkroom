@@ -9,12 +9,24 @@ class Message(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
 
-    conversation_id = db.Column(db.Integer, db.ForeignKey("conversations.id"), nullable=False)
-    sender_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
+    conversation_id = db.Column(
+        db.Integer,
+        db.ForeignKey("conversations.id"),
+        nullable=False
+    )
+
+    sender_id = db.Column(
+        db.Integer,
+        db.ForeignKey("users.id"),
+        nullable=False
+    )
 
     content = db.Column(db.Text, nullable=False)
 
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(
+        db.DateTime,
+        default=datetime.utcnow
+    )
 
     # =========================
     # EDITING
@@ -22,10 +34,9 @@ class Message(db.Model):
     edited = db.Column(db.Boolean, default=False)
 
     # =========================
-    # DELIVERY SYSTEM (WHATSAPP CORE)
+    # DELIVERY SYSTEM
     # =========================
     status = db.Column(db.String(20), default="sent")  # sent | delivered | read
-
     delivered_at = db.Column(db.DateTime, nullable=True)
     read_at = db.Column(db.DateTime, nullable=True)
 
@@ -33,6 +44,16 @@ class Message(db.Model):
     # DELETE SYSTEM
     # =========================
     deleted_for_everyone = db.Column(db.Boolean, default=False)
-    deleted_for_users = db.Column(db.JSON, default=list)
+
+    # safer than JSON list mutation issues
+    deleted_for_users = db.Column(db.JSON, default=lambda: [])
 
     delete_requested_at = db.Column(db.DateTime, nullable=True)
+
+    # =========================
+    # UNDO SUPPORT (IMPORTANT ADDITION)
+    # =========================
+    backup_content = db.Column(db.Text, nullable=True)
+
+    def __repr__(self):
+        return f"<Message {self.id} sender={self.sender_id}>"

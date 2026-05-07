@@ -1,4 +1,5 @@
 # app/inbox/views/inbox_list.py
+
 from datetime import datetime
 
 from flask.views import MethodView
@@ -16,25 +17,30 @@ class InboxAPI(MethodView):
 
         user_id = int(get_jwt_identity())
 
-        # =============================
-        # MARK MESSAGES AS DELIVERED
-        # =============================
-        Message.query.filter(
-            Message.sender_id != user_id,
-            Message.delivered_at.is_(None)
-        ).update(
-            {
-                "delivered_at": datetime.utcnow(),
-                "status": "delivered"
-            },
-            synchronize_session=False
+        # ==================================
+        # MARK RECEIVED MESSAGES AS DELIVERED
+        # ==================================
+        (
+            Message.query
+            .filter(
+                Message.sender_id != user_id,
+                Message.delivered_at.is_(None)
+            )
+            .update(
+                {
+                    Message.delivered_at: datetime.utcnow(),
+                    Message.status: "delivered"
+                },
+                synchronize_session=False
+            )
         )
 
         db.session.commit()
 
-        # =============================
-        # FETCH INBOX
-        # =============================
-        results = get_inbox(user_id)
+        # ==================================
+        # FETCH USER INBOX
+        # (service handles hidden conversations)
+        # ==================================
+        inbox = get_inbox(user_id)
 
-        return results, 200
+        return inbox, 200

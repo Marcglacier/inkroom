@@ -1,38 +1,42 @@
 # app/inbox/services/messages/fetch_messages.py
 from app.inbox.models.message import Message
+from app.inbox.models.conversation_clear import ConversationClear
 
 
-def fetch_messages(conversation_id, current_user_id=None):
+def fetch_messages(conversation_id, current_user_id):
 
-    msgs = (
-        Message.query
-        .filter_by(conversation_id=conversation_id)
-        .order_by(Message.created_at.asc())
-        .all()
-    )
+    query = Message.query.filter_by(
+        conversation_id=conversation_id
+    ).order_by(Message.created_at.asc())
 
-    results = []
+    messages = []
 
-    for m in msgs:
+    for message in query:
 
-        is_sender = (m.sender_id == current_user_id)
+        # -----------------------------
+        # DELETE FOR EVERYONE
+        # -----------------------------
+        if message.deleted_for_everyone:
+            continue
 
-        base = {
-            "id": m.id,
-            "sender_id": m.sender_id,
-            "content": m.content,
-            "created_at": m.created_at,
-            "edited": m.edited,
-            "is_sender": is_sender
-        }
+        # -----------------------------
+        # DELETE FOR ME
+        # -----------------------------
+        deleted_users = message.deleted_for_users or []
 
-        if is_sender:
-            base.update({
-                "status": m.status,
-                "delivered_at": m.delivered_at,
-                "read_at": m.read_at
-            })
+        if current_user_id in deleted_users:
+            continue
 
-        results.append(base)
+        messages.append({
+            "id": message.id,
+            "content": message.content,
+            "sender_id": message.sender_id,
+            "created_at": message.created_at,
+            "edited": message.edited,
+            "status": message.status,
+            "delivered_at": message.delivered_at,
+            "read_at": message.read_at,
+            "is_sender": message.sender_id == current_user_id
+        })
 
-    return results
+    return messages

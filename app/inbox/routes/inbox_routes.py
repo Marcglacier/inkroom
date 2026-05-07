@@ -8,6 +8,7 @@ from app.inbox.views.edit_message import EditMessageAPI
 from app.inbox.views.delete_message import DeleteMessageAPI
 from app.inbox.views.undo_delete import UndoDeleteAPI
 from app.inbox.views.clear_conversation import ClearConversationAPI
+from app.inbox.views.delete_conversation import DeleteConversationAPI
 
 inbox_bp = Blueprint("inbox", __name__)
 clear_conversation_view = ClearConversationAPI.as_view("clear_conversation")
@@ -58,5 +59,12 @@ inbox_bp.add_url_rule(
 inbox_bp.add_url_rule(
     "/conversations/<int:conversation_id>/clear",
     view_func=clear_conversation_view,
+    methods=["DELETE"]
+)
+
+# DELETE /api/inbox/conversations/<conversation_id>/delete
+inbox_bp.add_url_rule(
+    "/conversations/<int:conversation_id>/delete",
+    view_func=DeleteConversationAPI.as_view("delete_conversation"),
     methods=["DELETE"]
 )
