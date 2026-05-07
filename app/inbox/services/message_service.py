@@ -14,7 +14,10 @@ class MessageService:
     @staticmethod
     def send_message(sender_id, receiver_id, content):
 
-        convo = ConversationService.get_or_create(sender_id, receiver_id)
+        convo = ConversationService.get_or_create(
+            sender_id,
+            receiver_id
+        )
 
         msg = Message(
             conversation_id=convo.id,
@@ -70,10 +73,15 @@ class MessageService:
             # =========================
             # DELETE FOR ME
             # =========================
-            if m.deleted_for_users and current_user_id in m.deleted_for_users:
+            if (
+                m.deleted_for_users
+                and current_user_id in m.deleted_for_users
+            ):
                 continue
 
-            is_sender = (m.sender_id == current_user_id)
+            is_sender = (
+                m.sender_id == current_user_id
+            )
 
             base = {
                 "id": m.id,
@@ -87,8 +95,16 @@ class MessageService:
             # DELETE FOR EVERYONE
             # =========================
             if m.deleted_for_everyone:
-                base["content"] = "This message was deleted"
-                base["deleted"] = True
+
+                base.update({
+                    "content": "This message was deleted",
+                    "deleted": True,
+                    "edited": False
+                })
+
+                results.append(base)
+                continue
+
             else:
                 base["content"] = m.content
 
@@ -96,6 +112,7 @@ class MessageService:
             # SENDER VIEW
             # =========================
             if is_sender:
+
                 base.update({
                     "status": m.status,
                     "delivered_at": m.delivered_at,
@@ -107,7 +124,7 @@ class MessageService:
             # =========================
             else:
 
-                # mark message as read when receiver opens chat
+                # auto-read when receiver opens chat
                 if not m.read_at:
                     m.status = "read"
                     m.read_at = datetime.utcnow()

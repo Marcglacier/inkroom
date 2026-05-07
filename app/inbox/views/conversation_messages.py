@@ -1,7 +1,9 @@
 # app/inbox/views/conversation_messages.py
+
+from datetime import datetime
+
 from flask.views import MethodView
 from flask_jwt_extended import jwt_required, get_jwt_identity
-from datetime import datetime
 
 from app.extensions import db, socketio
 from app.inbox.models.message import Message
@@ -16,41 +18,49 @@ class ConversationMessagesAPI(MethodView):
 
         user_id = int(get_jwt_identity())
 
-        # -----------------------------
+        # =============================
         # MARK DELIVERED
-        # -----------------------------
-        delivered = Message.query.filter(
-            Message.conversation_id == conversation_id,
-            Message.sender_id != user_id,
-            Message.delivered_at.is_(None)
-        ).update(
-            {
-                "delivered_at": datetime.utcnow(),
-                "status": "delivered"
-            },
-            synchronize_session=False
+        # =============================
+        delivered = (
+            Message.query
+            .filter(
+                Message.conversation_id == conversation_id,
+                Message.sender_id != user_id,
+                Message.delivered_at.is_(None)
+            )
+            .update(
+                {
+                    "delivered_at": datetime.utcnow(),
+                    "status": "delivered"
+                },
+                synchronize_session=False
+            )
         )
 
-        # -----------------------------
+        # =============================
         # MARK READ
-        # -----------------------------
-        read = Message.query.filter(
-            Message.conversation_id == conversation_id,
-            Message.sender_id != user_id,
-            Message.read_at.is_(None)
-        ).update(
-            {
-                "read_at": datetime.utcnow(),
-                "status": "read"
-            },
-            synchronize_session=False
+        # =============================
+        read = (
+            Message.query
+            .filter(
+                Message.conversation_id == conversation_id,
+                Message.sender_id != user_id,
+                Message.read_at.is_(None)
+            )
+            .update(
+                {
+                    "read_at": datetime.utcnow(),
+                    "status": "read"
+                },
+                synchronize_session=False
+            )
         )
 
         db.session.commit()
 
-        # -----------------------------
+        # =============================
         # SOCKET EVENTS
-        # -----------------------------
+        # =============================
         if delivered:
             socketio.emit(
                 "messages_delivered",
@@ -71,9 +81,9 @@ class ConversationMessagesAPI(MethodView):
                 room=f"conversation_{conversation_id}"
             )
 
-        # -----------------------------
+        # =============================
         # FETCH MESSAGES
-        # -----------------------------
+        # =============================
         messages = MessageService.get_messages(
             conversation_id,
             current_user_id=user_id
@@ -89,15 +99,18 @@ class ConversationMessagesAPI(MethodView):
                 "id": m["id"],
                 "content": m["content"],
                 "sender_id": m["sender_id"],
-                "sender_username": sender.username if sender else None,
+                "sender_username": (
+                    sender.username if sender else None
+                ),
                 "created_at": m["created_at"],
                 "edited": m.get("edited", False)
             }
 
-            # -----------------------------
+            # =============================
             # ONLY SENDER SEES STATUS
-            # -----------------------------
+            # =============================
             if m.get("is_sender"):
+
                 payload.update({
                     "status": m.get("status"),
                     "delivered_at": m.get("delivered_at"),
