@@ -2,11 +2,11 @@
 from flask.views import MethodView
 from flask import jsonify
 from flask_jwt_extended import jwt_required, get_jwt_identity
+
 from datetime import datetime, timedelta
 
 from app.extensions import db
 from app.inbox.models.message import Message
-
 
 class UndoDeleteAPI(MethodView):
 
