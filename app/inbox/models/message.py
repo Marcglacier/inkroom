@@ -1,5 +1,3 @@
-# app/inbox/models/message.py
-
 from datetime import datetime
 from app.extensions import db
 
@@ -29,6 +27,21 @@ class Message(db.Model):
     )
 
     # =========================
+    # MESSAGE REPLY
+    # =========================
+    reply_to_message_id = db.Column(
+        db.Integer,
+        db.ForeignKey("messages.id", ondelete="SET NULL"),
+        nullable=True
+    )
+
+    reply_to = db.relationship(
+        "Message",
+        remote_side=[id],
+        lazy=True
+    )
+
+    # =========================
     # EDITING
     # =========================
     edited = db.Column(db.Boolean, default=False)
@@ -45,15 +58,28 @@ class Message(db.Model):
     # =========================
     deleted_for_everyone = db.Column(db.Boolean, default=False)
 
-    # safer than JSON list mutation issues
-    deleted_for_users = db.Column(db.JSON, default=lambda: [])
+    deleted_for_users = db.Column(
+        db.JSON,
+        default=lambda: []
+    )
 
-    delete_requested_at = db.Column(db.DateTime, nullable=True)
+    delete_requested_at = db.Column(
+        db.DateTime,
+        nullable=True
+    )
 
     # =========================
-    # UNDO SUPPORT (IMPORTANT ADDITION)
+    # UNDO DELETE SUPPORT
     # =========================
-    backup_content = db.Column(db.Text, nullable=True)
+    backup_content = db.Column(
+        db.Text,
+        nullable=True
+    )
+
+    # =========================
+    # RELATIONSHIPS
+    # =========================
+    sender = db.relationship("User", lazy=True)
 
     def __repr__(self):
         return f"<Message {self.id} sender={self.sender_id}>"

@@ -10,3 +10,17 @@ curl -X POST http://127.0.0.1:5000/api/auth/login \
 
 export TOKEN=""
 echo $TOKEN
+
+printf '{"emoji":"😊"}' > react1.json
+
+curl.exe -X POST "http://127.0.0.1:5000/api/inbox/messages/28/react" \
+-H "Authorization: Bearer $TOKEN_MARK" \
+-H "Content-Type: application/json" \
+--data-binary "@react1.json"
+
+
+ curl -X POST "http://127.0.0.1:5000/api/inbox/messages/1" \
+-H "Authorization: Bearer $TOKEN_MAR" \
+-H "Content-Type: application/json" \
+--data-binary '{"content":"got you 😂","reply_to_message_id":64}'
+

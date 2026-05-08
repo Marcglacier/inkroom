@@ -1,5 +1,3 @@
-# app/inbox/views/conversation_messages.py
-
 from datetime import datetime
 
 from flask.views import MethodView
@@ -11,7 +9,7 @@ from app.inbox.models.conversation_clear import ConversationClear
 from app.models.user import User
 
 from app.inbox.services.messages.fetch_messages import fetch_messages
-
+from app.inbox.services.messages.message_reaction_aggregator import build_reactions
 
 class ConversationMessagesAPI(MethodView):
 
@@ -27,13 +25,10 @@ class ConversationMessagesAPI(MethodView):
             Message.conversation_id == conversation_id,
             Message.sender_id != user_id,
             Message.delivered_at.is_(None)
-        ).update(
-            {
-                "delivered_at": datetime.utcnow(),
-                "status": "delivered"
-            },
-            synchronize_session=False
-        )
+        ).update({
+            "delivered_at": datetime.utcnow(),
+            "status": "delivered"
+        }, synchronize_session=False)
 
         # =============================
         # MARK READ
@@ -42,18 +37,15 @@ class ConversationMessagesAPI(MethodView):
             Message.conversation_id == conversation_id,
             Message.sender_id != user_id,
             Message.read_at.is_(None)
-        ).update(
-            {
-                "read_at": datetime.utcnow(),
-                "status": "read"
-            },
-            synchronize_session=False
-        )
+        ).update({
+            "read_at": datetime.utcnow(),
+            "status": "read"
+        }, synchronize_session=False)
 
         db.session.commit()
 
         # =============================
-        # SOCKET EVENTS
+        # SOCKET EVENT
         # =============================
         socketio.emit(
             "messages_updated",
@@ -65,12 +57,14 @@ class ConversationMessagesAPI(MethodView):
         )
 
         # =============================
-        # CHECK CLEAR CHAT
+        # GET CLEAR STATE
         # =============================
         clear = ConversationClear.query.filter_by(
             conversation_id=conversation_id,
             user_id=user_id
         ).first()
+
+        cleared_at = clear.cleared_at if clear else None
 
         # =============================
         # FETCH MESSAGES
@@ -80,11 +74,13 @@ class ConversationMessagesAPI(MethodView):
             current_user_id=user_id
         )
 
-        # hide messages before clear time
-        if clear:
+        # =============================
+        # APPLY CLEAR FILTER
+        # =============================
+        if cleared_at:
             messages = [
                 m for m in messages
-                if m["created_at"] > clear.cleared_at
+                if m["created_at"] > cleared_at
             ]
 
         results = []
@@ -99,10 +95,15 @@ class ConversationMessagesAPI(MethodView):
                 "sender_id": m["sender_id"],
                 "sender_username": sender.username if sender else None,
                 "created_at": m["created_at"],
-                "edited": m.get("edited", False)
+                "edited": m.get("edited", False),
+
+                # 🔥 NEW: reply support
+                "reply_to": m.get("reply_to"),
+                # 🔥 NEW: reactions
+                "reactions": build_reactions(m["id"])
             }
 
-            # sender sees full tracking
+            # sender sees tracking
             if m.get("is_sender"):
                 payload.update({
                     "status": m.get("status"),
