@@ -9,6 +9,7 @@ from app.users import users_bp
 from app.inbox.routes.inbox_routes import inbox_bp
 from app.extensions import socketio
 import app.realtime
+from app.inbox.sockets import register_socket_events
 
 from .models import *
 
@@ -22,6 +23,7 @@ def create_app():
     jwt.init_app(app)
     socketio.init_app(app)
     oauth.init_app(app)
+    register_socket_events(socketio)
     
 
 
