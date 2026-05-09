@@ -1,3 +1,4 @@
+# app/inbox/models/message.py
 from datetime import datetime
 from app.extensions import db
 
@@ -27,7 +28,7 @@ class Message(db.Model):
     )
 
     # =========================
-    # MESSAGE REPLY
+    # REPLY SYSTEM (FIXED)
     # =========================
     reply_to_message_id = db.Column(
         db.Integer,
@@ -37,7 +38,9 @@ class Message(db.Model):
 
     reply_to = db.relationship(
         "Message",
-        remote_side=[id],
+        remote_side="Message.id",
+        foreign_keys=[reply_to_message_id],
+        backref="replies",
         lazy=True
     )
 
@@ -49,7 +52,7 @@ class Message(db.Model):
     # =========================
     # DELIVERY SYSTEM
     # =========================
-    status = db.Column(db.String(20), default="sent")  # sent | delivered | read
+    status = db.Column(db.String(20), default="sent")
     delivered_at = db.Column(db.DateTime, nullable=True)
     read_at = db.Column(db.DateTime, nullable=True)
 
@@ -69,12 +72,23 @@ class Message(db.Model):
     )
 
     # =========================
-    # UNDO DELETE SUPPORT
+    # BACKUP CONTENT
     # =========================
     backup_content = db.Column(
         db.Text,
         nullable=True
     )
+
+    # =========================
+    # FORWARDING SYSTEM
+    # =========================
+    forwarded_from_id = db.Column(
+        db.Integer,
+        db.ForeignKey("messages.id"),
+        nullable=True
+    )
+
+    is_forwarded = db.Column(db.Boolean, default=False)
 
     # =========================
     # RELATIONSHIPS

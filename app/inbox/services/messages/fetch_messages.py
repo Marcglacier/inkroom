@@ -76,7 +76,9 @@ def fetch_messages(conversation_id, current_user_id):
             "delivered_at": message.delivered_at,
             "read_at": message.read_at,
             "is_sender": message.sender_id == current_user_id,
-            
+
+            "is_forwarded": message.is_forwarded,
+            "forwarded_from_id": message.forwarded_from_id,
 
             # 🔥 reply preview
             "reply_to": reply_data,

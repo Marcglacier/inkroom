@@ -10,9 +10,11 @@ from app.inbox.views.undo_delete import UndoDeleteAPI
 from app.inbox.views.clear_conversation import ClearConversationAPI
 from app.inbox.views.delete_conversation import DeleteConversationAPI
 from app.inbox.views.react_to_message import ReactToMessageAPI
+from app.inbox.views.forward_message import ForwardMessageAPI
 
 inbox_bp = Blueprint("inbox", __name__)
 clear_conversation_view = ClearConversationAPI.as_view("clear_conversation")
+forward_view = ForwardMessageAPI.as_view("forward_message")
 
 # GET /api/inbox
 inbox_bp.add_url_rule(
@@ -74,5 +76,12 @@ inbox_bp.add_url_rule(
 inbox_bp.add_url_rule(
     "/messages/<int:message_id>/react",
     view_func=ReactToMessageAPI.as_view("react_to_message"),
+    methods=["POST"]
+)
+
+# POST /api/inbox/messages/forward
+inbox_bp.add_url_rule(
+    "/messages/forward",
+    view_func=forward_view,
     methods=["POST"]
 )

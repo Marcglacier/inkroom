@@ -1,64 +1,66 @@
 import socketio
+import time
 
 # =========================
-# INSERT A VALID JWT TOKEN
+# JWT TOKEN
 # =========================
-TOKEN = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJmcmVzaCI6ZmFsc2UsImlhdCI6MTc3ODMzNzYyOSwianRpIjoiNGNiOGQ1YTAtM2Y4MC00ZDRhLWIzZTEtNjIzMjVjZGEzZTMyIiwidHlwZSI6ImFjY2VzcyIsInN1YiI6IjUiLCJuYmYiOjE3NzgzMzc2MjksImNzcmYiOiJhMTczZTNhYS1hMDQ3LTRlZTUtYjI1ZC00MzNhNTY0MDk2NmMiLCJleHAiOjE3NzgzMzg1Mjl9.Bm2ry0xCkoT3RrQgeEwx-3PipmG-EGn8qHPzJT0SRKY"
+TOKEN = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJmcmVzaCI6ZmFsc2UsImlhdCI6MTc3ODM0NjI2OSwianRpIjoiOTdhMDQ1NGItOGRiZS00MjViLTljNjAtMTkwYzgxZTkyOWViIiwidHlwZSI6ImFjY2VzcyIsInN1YiI6IjUiLCJuYmYiOjE3NzgzNDYyNjksImNzcmYiOiIwNDcwNzcyZC03NWY1LTQyZmYtYTE0ZC1kOWE3NTAzNzZjY2YiLCJleHAiOjE3NzgzNDcxNjl9.p1exIUT4gRiUoPBME4jApwq6tNhG_aaQIhuUSlWQOso"
 
 sio = socketio.Client()
 
 
 # =========================
-# CONNECTION EVENTS
+# CONNECT
 # =========================
 @sio.event
 def connect():
     print("✅ Connected to server")
 
-    # Join conversation room
+    # Join a conversation (optional)
     sio.emit("join_conversation", {
         "conversation_id": 1
     })
 
-    print("Joined conversation 1")
+    print("📥 Joined conversation 1")
 
-    # Simulate typing
-    sio.emit("typing_start", {
-        "conversation_id": 1
-    })
+    # simulate activity delay so we can test online status
+    print("⏳ Staying online for 5 seconds to simulate active user...")
+    time.sleep(5)
 
 
+# =========================
+# DISCONNECT
+# =========================
 @sio.event
 def disconnect():
     print("❌ Disconnected from server")
+    print("🕒 This should trigger last_seen update on backend")
 
 
 # =========================
-# SERVER EVENTS
+# SOCKET EVENTS (optional debug)
 # =========================
 @sio.on("user_typing")
-def user_typing(data):
-    print("✏️ User typing:", data)
+def typing(data):
+    print("✏️ typing:", data)
 
 
 @sio.on("user_stop_typing")
-def user_stop_typing(data):
-    print("🛑 User stopped typing:", data)
+def stop_typing(data):
+    print("🛑 stop typing:", data)
 
 
+# =========================
+# RUN TEST
+# =========================
 print("Connecting...")
 
-# =========================
-# CONNECT WITH JWT TOKEN
-# =========================
-sio.connect(
-    f"http://127.0.0.1:5000?token={TOKEN}"
-)
+sio.connect(f"http://127.0.0.1:5000?token={TOKEN}")
 
-input("Press ENTER to simulate stop typing...\n")
+# keep connection alive for a bit
+time.sleep(5)
 
-sio.emit("typing_stop", {
-    "conversation_id": 1
-})
+print("🔌 Closing connection to trigger last_seen...")
+sio.disconnect()
 
-input("Press ENTER to exit...\n")
+print("Done.")
