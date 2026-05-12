@@ -1,5 +1,6 @@
 # app/inbox/models/message.py
 from datetime import datetime
+from sqlalchemy.dialects.postgresql import TSVECTOR
 from app.extensions import db
 
 
@@ -9,26 +10,24 @@ class Message(db.Model):
     id = db.Column(db.Integer, primary_key=True)
 
     conversation_id = db.Column(
-        db.Integer,
-        db.ForeignKey("conversations.id"),
-        nullable=False
+        db.Integer, db.ForeignKey("conversations.id"), nullable=False
     )
 
     sender_id = db.Column(
-        db.Integer,
-        db.ForeignKey("users.id"),
-        nullable=False
+        db.Integer, db.ForeignKey("users.id"), nullable=False
     )
 
     content = db.Column(db.Text, nullable=False)
 
-    created_at = db.Column(
-        db.DateTime,
-        default=datetime.utcnow
-    )
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
     # =========================
-    # REPLY SYSTEM (FIXED)
+    # FULL TEXT SEARCH
+    # =========================
+    search_vector = db.Column(TSVECTOR)
+
+    # =========================
+    # REPLY SYSTEM
     # =========================
     reply_to_message_id = db.Column(
         db.Integer,
@@ -53,8 +52,8 @@ class Message(db.Model):
     # DELIVERY SYSTEM
     # =========================
     status = db.Column(db.String(20), default="sent")
-    delivered_at = db.Column(db.DateTime, nullable=True)
-    read_at = db.Column(db.DateTime, nullable=True)
+    delivered_at = db.Column(db.DateTime)
+    read_at = db.Column(db.DateTime)
 
     # =========================
     # DELETE SYSTEM
@@ -66,18 +65,12 @@ class Message(db.Model):
         default=lambda: []
     )
 
-    delete_requested_at = db.Column(
-        db.DateTime,
-        nullable=True
-    )
+    delete_requested_at = db.Column(db.DateTime)
 
     # =========================
     # BACKUP CONTENT
     # =========================
-    backup_content = db.Column(
-        db.Text,
-        nullable=True
-    )
+    backup_content = db.Column(db.Text)
 
     # =========================
     # FORWARDING SYSTEM

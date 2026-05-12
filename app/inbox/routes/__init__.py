@@ -4,6 +4,7 @@ from flask import Blueprint
 from app.inbox.routes.message_routes import register_message_routes
 from app.inbox.routes.conversation_routes import register_conversation_routes
 from app.inbox.api.inbox.inbox_list import InboxAPI
+from .search_routes import search_bp
 
 
 def create_inbox_blueprint():
@@ -16,8 +17,11 @@ def create_inbox_blueprint():
         methods=["GET"]
     )
 
-    # register route groups
+    # Register route groups
     register_message_routes(inbox_bp)
     register_conversation_routes(inbox_bp)
+
+    # Register search routes
+    inbox_bp.register_blueprint(search_bp)
 
     return inbox_bp
