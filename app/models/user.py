@@ -47,3 +47,7 @@ class User(db.Model):
 
     def check_password(self, password):
         return bool(self.password_hash) and check_password_hash(self.password_hash, password)
+    
+    online = db.Column(db.Boolean, default=False)
+    last_seen = db.Column(db.DateTime, nullable=True)
+    # =========================

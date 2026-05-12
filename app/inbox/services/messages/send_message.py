@@ -1,13 +1,25 @@
 # app/inbox/services/messages/send_message.py
 
+import os
 from datetime import datetime
+from werkzeug.utils import secure_filename
 
 from app.extensions import db, socketio
 from app.inbox.models.message import Message
+from app.inbox.models.message_media import MessageMedia
 from app.inbox.services.conversations.conversation_service import ConversationService
 
 
-def send_message(sender_id, receiver_id, content, reply_to_message_id=None):
+UPLOAD_FOLDER = "storage/messages"
+
+
+def send_message(sender_id, receiver_id, content=None, files=None, reply_to_message_id=None):
+
+    # =============================
+    # VALIDATE MESSAGE
+    # =============================
+    if not content and not files:
+        return {"error": "Message must contain text or media"}, 400
 
     # =============================
     # GET OR CREATE CONVERSATION
@@ -15,7 +27,7 @@ def send_message(sender_id, receiver_id, content, reply_to_message_id=None):
     convo = ConversationService.get_or_create(sender_id, receiver_id)
 
     # =============================
-    # VALIDATE REPLY (🔥 FIX)
+    # VALIDATE REPLY
     # =============================
     if reply_to_message_id:
         parent = Message.query.get(reply_to_message_id)
@@ -43,6 +55,38 @@ def send_message(sender_id, receiver_id, content, reply_to_message_id=None):
     )
 
     db.session.add(msg)
+    db.session.flush()  # Get message ID before commit
+
+    media_urls = []
+
+    # =============================
+    # HANDLE MEDIA FILES
+    # =============================
+    if files:
+
+        os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+
+        for file in files:
+
+            if not file.filename:
+                continue
+
+            filename = secure_filename(file.filename)
+
+            path = os.path.join(UPLOAD_FOLDER, filename)
+
+            file.save(path)
+
+            media = MessageMedia(
+                message_id=msg.id,
+                file_url=path,
+                file_type="image"
+            )
+
+            db.session.add(media)
+
+            media_urls.append(path)
+
     db.session.commit()
 
     # =============================
@@ -55,6 +99,7 @@ def send_message(sender_id, receiver_id, content, reply_to_message_id=None):
             "conversation_id": convo.id,
             "sender_id": sender_id,
             "content": msg.content,
+            "media": media_urls,
             "reply_to_message_id": msg.reply_to_message_id,
             "status": msg.status,
             "created_at": msg.created_at.isoformat(),
@@ -69,5 +114,6 @@ def send_message(sender_id, receiver_id, content, reply_to_message_id=None):
         "conversation_id": convo.id,
         "status": msg.status,
         "reply_to_message_id": msg.reply_to_message_id,
+        "media": media_urls,
         "created_at": msg.created_at.isoformat()
     }
