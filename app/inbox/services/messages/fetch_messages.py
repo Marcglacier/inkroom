@@ -4,6 +4,7 @@ from app.inbox.models.message import Message
 from app.models.user import User
 from app.inbox.services.messages.message_reaction_aggregator import build_reactions
 
+
 def fetch_messages(conversation_id, current_user_id):
 
     query = Message.query.filter_by(
@@ -33,13 +34,25 @@ def fetch_messages(conversation_id, current_user_id):
             continue
 
         # =============================
-        # REPLY OBJECT (OPTIMIZED)
+        # SENDER USERNAME (CACHE)
+        # =============================
+        sender_id = message.sender_id
+
+        if sender_id in user_cache:
+            sender = user_cache[sender_id]
+        else:
+            sender = User.query.get(sender_id)
+            user_cache[sender_id] = sender
+
+        sender_username = sender.username if sender else None
+
+        # =============================
+        # REPLY OBJECT
         # =============================
         reply_data = None
 
         if message.reply_to_message_id:
 
-            # fetch replied message once
             if message.reply_to_message_id in message_cache:
                 replied_msg = message_cache[message.reply_to_message_id]
             else:
@@ -48,19 +61,18 @@ def fetch_messages(conversation_id, current_user_id):
 
             if replied_msg and not replied_msg.deleted_for_everyone:
 
-                # fetch sender once
-                sender_id = replied_msg.sender_id
+                reply_sender_id = replied_msg.sender_id
 
-                if sender_id in user_cache:
-                    sender = user_cache[sender_id]
+                if reply_sender_id in user_cache:
+                    reply_sender = user_cache[reply_sender_id]
                 else:
-                    sender = User.query.get(sender_id)
-                    user_cache[sender_id] = sender
+                    reply_sender = User.query.get(reply_sender_id)
+                    user_cache[reply_sender_id] = reply_sender
 
                 reply_data = {
                     "id": replied_msg.id,
                     "content": replied_msg.content,
-                    "sender_username": sender.username if sender else "unknown"
+                    "sender_username": reply_sender.username if reply_sender else "unknown"
                 }
 
         # =============================
@@ -69,19 +81,27 @@ def fetch_messages(conversation_id, current_user_id):
         messages.append({
             "id": message.id,
             "content": message.content,
+
+            "media_url": message.media_url,
+            "media_type": message.media_type,
+
             "sender_id": message.sender_id,
+            "sender_username": sender_username,
+
             "created_at": message.created_at,
             "edited": message.edited,
+
             "status": message.status,
             "delivered_at": message.delivered_at,
             "read_at": message.read_at,
+
             "is_sender": message.sender_id == current_user_id,
 
             "is_forwarded": message.is_forwarded,
             "forwarded_from_id": message.forwarded_from_id,
 
-            # 🔥 reply preview
             "reply_to": reply_data,
+
             "reactions": build_reactions(message.id)
         })
 

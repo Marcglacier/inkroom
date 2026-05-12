@@ -1,5 +1,6 @@
 # app/__init__.py
-from flask import Flask
+from flask import Flask, send_from_directory
+import os
 
 from .config import Config
 from .extensions import db, migrate, jwt, socketio, oauth
@@ -38,5 +39,15 @@ def create_app():
 
     inbox_bp = create_inbox_blueprint()
     app.register_blueprint(inbox_bp, url_prefix="/api/inbox")
+
+    # =========================
+    # SERVE MESSAGE MEDIA (FIXED)
+    # =========================
+    @app.route("/media/messages/<path:filename>")
+    def serve_message_media(filename):
+        return send_from_directory(
+            os.path.join("storage", "messages"),
+            filename
+        )
 
     return app
