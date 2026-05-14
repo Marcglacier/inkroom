@@ -5,6 +5,7 @@ from flask import Blueprint
 from .views.get_notifications import GetNotificationsAPI
 from .views.unread_count import UnreadCountAPI
 from .views.mark_as_read import MarkAsReadAPI
+from .views.mark_all_as_read import MarkAllAsReadAPI
 
 notifications_bp = Blueprint(
     "notifications",
@@ -27,5 +28,11 @@ notifications_bp.add_url_rule(
 notifications_bp.add_url_rule(
     "/<int:notification_id>/read",
     view_func=MarkAsReadAPI.as_view("mark_as_read"),
+    methods=["PATCH"]
+)
+
+notifications_bp.add_url_rule(
+    "/all/read",
+    view_func=MarkAllAsReadAPI.as_view("mark_all_as_read"),
     methods=["PATCH"]
 )

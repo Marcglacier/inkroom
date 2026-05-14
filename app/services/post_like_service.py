@@ -1,8 +1,13 @@
 # app/services/post_like_service.py
+
 from app.extensions import db
+
 from app.models.post_like import PostLike
 from app.models.post import Post
-from app.notifications.services import NotificationService
+
+from app.notifications.services import (
+    create_post_like
+)
 
 
 def toggle_like(user_id, post_id):
@@ -17,8 +22,11 @@ def toggle_like(user_id, post_id):
     # =========================
     # UNLIKE FLOW
     # =========================
+
     if like:
+
         db.session.delete(like)
+
         post.likes_count -= 1
 
         db.session.commit()
@@ -28,18 +36,23 @@ def toggle_like(user_id, post_id):
     # =========================
     # LIKE FLOW
     # =========================
+
     new_like = PostLike(
         user_id=user_id,
         post_id=post_id
     )
 
     db.session.add(new_like)
+
     post.likes_count += 1
 
     db.session.commit()
 
-    # 🔔 Notification (AFTER successful like)
-    NotificationService.create_post_like(
+    # =========================
+    # NOTIFICATION
+    # =========================
+
+    create_post_like(
         actor_id=user_id,
         post=post
     )
