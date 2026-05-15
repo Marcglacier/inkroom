@@ -3,7 +3,7 @@ from flask.views import MethodView
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from flask import jsonify
 
-from app.users.services.follow_service import FollowService
+from app.users.services import unfollow_user
 
 
 class UnfollowUserAPI(MethodView):
@@ -13,7 +13,7 @@ class UnfollowUserAPI(MethodView):
 
         follower_id = int(get_jwt_identity())
 
-        deleted = FollowService.unfollow_user(
+        deleted = unfollow_user(
             follower_id,
             user_id
         )

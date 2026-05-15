@@ -1,4 +1,5 @@
 # app/__init__.py
+
 from flask import Flask, send_from_directory
 import os
 
@@ -13,6 +14,8 @@ from app.users import users_bp
 from app.inbox.routes import create_inbox_blueprint
 from app.inbox.sockets import register_socket_events
 
+from app.notifications.routes import notifications_bp
+
 import app.realtime
 from .models import *
 
@@ -21,17 +24,23 @@ def create_app():
     app = Flask(__name__)
     app.config.from_object(Config)
 
-    # Extensions
+    # =========================
+    # EXTENSIONS
+    # =========================
     db.init_app(app)
     migrate.init_app(app, db)
     jwt.init_app(app)
     socketio.init_app(app)
     oauth.init_app(app)
 
-    # Register socket events
+    # =========================
+    # SOCKET EVENTS
+    # =========================
     register_socket_events(socketio)
 
-    # Register blueprints
+    # =========================
+    # BLUEPRINTS
+    # =========================
     app.register_blueprint(auth_bp)
     app.register_blueprint(blog_bp)
     app.register_blueprint(comment_bp, url_prefix="/api")
@@ -40,8 +49,10 @@ def create_app():
     inbox_bp = create_inbox_blueprint()
     app.register_blueprint(inbox_bp, url_prefix="/api/inbox")
 
+    app.register_blueprint(notifications_bp)
+
     # =========================
-    # SERVE MESSAGE MEDIA (FIXED)
+    # SERVE MESSAGE MEDIA
     # =========================
     @app.route("/media/messages/<path:filename>")
     def serve_message_media(filename):

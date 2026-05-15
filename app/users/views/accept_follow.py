@@ -4,7 +4,7 @@ from flask.views import MethodView
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from flask import jsonify
 
-from app.users.services.follow_service import FollowService
+from app.users.services import accept_follow
 
 
 class AcceptFollowAPI(MethodView):
@@ -17,7 +17,7 @@ class AcceptFollowAPI(MethodView):
         if current_user_id != user_id:
             return jsonify({"error": "Unauthorized"}), 403
 
-        result = FollowService.accept_follow(
+        result = accept_follow(
             user_id,
             follower_id
         )
