@@ -3,7 +3,7 @@ from flask.views import MethodView
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from flask import jsonify
 
-from app.users.services.follow_service import FollowService
+from app.users.services import follow_user
 
 
 class FollowUserAPI(MethodView):
@@ -13,7 +13,7 @@ class FollowUserAPI(MethodView):
 
         current_user_id = int(get_jwt_identity())
 
-        result = FollowService.follow_user(
+        result = follow_user(
             current_user_id,
             user_id
         )

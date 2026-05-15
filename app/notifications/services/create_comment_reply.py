@@ -1,15 +1,11 @@
 # app/notifications/services/create_comment_reply.py
-from .create_notification import (
-    create_notification
-)
+from .create_notification import create_notification
+from .utils import should_notify
 
-def create_comment_reply(
-    actor_id,
-    parent_comment,
-    reply_comment
-):
 
-    if parent_comment.user_id == actor_id:
+def create_comment_reply(actor_id, parent_comment, reply_comment):
+
+    if not should_notify(actor_id, parent_comment.user_id):
         return None
 
     return create_notification(

@@ -12,19 +12,20 @@ class UpdateProfileAPI(MethodView):
     def get(self):
         user_id = int(get_jwt_identity())
 
-        # viewer and profile owner are the same
         result = get_profile(user_id, user_id)
 
-        return jsonify(result)
+        return jsonify(result), 200
 
 
     @jwt_required()
     def patch(self):
-
         user_id = int(get_jwt_identity())
 
         data = request.get_json()
 
+        if not data:
+            return jsonify({"error": "No data provided"}), 400
+
         result = update_profile(user_id, data)
 
-        return jsonify(result)
+        return jsonify(result), 200

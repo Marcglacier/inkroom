@@ -1,12 +1,11 @@
 # app/notifications/services/create_comment_like.py
-from .create_notification import (
-    create_notification
-)
+from .create_notification import create_notification
+from .utils import should_notify
 
 
 def create_comment_like(actor_id, comment):
 
-    if comment.user_id == actor_id:
+    if not should_notify(actor_id, comment.user_id):
         return None
 
     return create_notification(

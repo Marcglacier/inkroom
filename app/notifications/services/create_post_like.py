@@ -1,12 +1,11 @@
 # app/notifications/services/create_post_like.py
-from .create_notification import (
-    create_notification
-)
+from .create_notification import create_notification
+from .utils import should_notify
 
 
 def create_post_like(actor_id, post):
 
-    if post.author_id == actor_id:
+    if not should_notify(actor_id, post.author_id):
         return None
 
     return create_notification(

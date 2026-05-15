@@ -2,14 +2,14 @@
 from flask.views import MethodView
 from flask import jsonify
 
-from app.users.services.follow_service import FollowService
+from app.users.services import get_followers
 
 
 class GetFollowersAPI(MethodView):
 
     def get(self, user_id):
 
-        followers = FollowService.get_followers(user_id)
+        followers = get_followers(user_id)
 
         return jsonify([
             {
