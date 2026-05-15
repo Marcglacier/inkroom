@@ -1,9 +1,15 @@
 # app/users/services/accept_follow.py
+
 from app.extensions import db
 
 from app.models.follow import Follow
 from app.models.follow_request import FollowRequest
+
 from app.users.services.helpers import response
+
+from app.notifications.services import (
+    create_follow_accept_notification
+)
 
 
 def accept_follow(user_id, requester_id):
@@ -17,7 +23,7 @@ def accept_follow(user_id, requester_id):
         return {"error": "Request not found"}, 404
 
     # =========================
-    # CHECK IF FOLLOW EXISTS
+    # CREATE OR UPDATE FOLLOW
     # =========================
     follow = Follow.query.filter_by(
         follower_id=requester_id,
@@ -28,21 +34,31 @@ def accept_follow(user_id, requester_id):
         follow = Follow(
             follower_id=requester_id,
             following_id=user_id,
-            status="following"   # 🔥 IMPORTANT FIX
+            status="following"
         )
         db.session.add(follow)
 
     else:
         follow.status = "following"
 
-    # remove request
+    # =========================
+    # REMOVE REQUEST
+    # =========================
     db.session.delete(request)
 
     db.session.commit()
 
+    # =========================
+    # NOTIFICATION (IMPORTANT FIX)
+    # =========================
+    create_follow_accept_notification(
+        actor_id=user_id,
+        target_user_id=requester_id
+    )
+
     return response(
         "Follow request accepted",
-        "following",   # 🔥 FIXED (NOT accepted)
+        "following",
         follower_id=requester_id,
         following_id=user_id
     )
