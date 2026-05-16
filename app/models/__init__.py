@@ -14,7 +14,7 @@ from .follow_request import FollowRequest
 from app.inbox.models.conversation import Conversation
 from app.inbox.models.conversation_participant import ConversationParticipant
 from app.inbox.models.message import Message
-
+from app.models.repost import Repost
 __all__ = [
     "User",
     "Post",
@@ -29,5 +29,6 @@ __all__ = [
     "PostLike",
     "Follow",
     "Profile",
-    "FollowRequest"
+    "FollowRequest",
+    "Repost"
 ]

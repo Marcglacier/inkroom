@@ -13,7 +13,13 @@ def delete_comment_service(comment_id, user_id):
     if comment.user_id != int(user_id):
         return {"error": "Unauthorized"}, 403
 
+    post = comment.post
+
     db.session.delete(comment)
+
+    # SAFE decrement
+    post.comments_count = max(0, (post.comments_count or 0) - 1)
+
     db.session.commit()
 
     return {"message": "Comment deleted"}, 200
