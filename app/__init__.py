@@ -16,7 +16,7 @@ from app.inbox.sockets import register_socket_events
 
 from app.notifications.routes import notifications_bp
 from app.feed.routes import feed_bp
-
+from app.search.routes import search_bp
 import app.realtime
 from .models import *
 
@@ -52,6 +52,7 @@ def create_app():
 
     app.register_blueprint(notifications_bp)
     app.register_blueprint(feed_bp)
+    app.register_blueprint (search_bp)
     
     # =========================
     # SERVE MESSAGE MEDIA

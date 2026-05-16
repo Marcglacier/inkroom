@@ -9,57 +9,28 @@ class Comment(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
 
-    content = db.Column(
-        db.Text,
-        nullable=False
-    )
+    content = db.Column(db.Text, nullable=False)
 
-    user_id = db.Column(
-        db.Integer,
-        db.ForeignKey("users.id"),
-        nullable=False
-    )
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
 
-    post_id = db.Column(
-        db.Integer,
-        db.ForeignKey("posts.id"),
-        nullable=False
-    )
+    post_id = db.Column(db.Integer, db.ForeignKey("posts.id", ondelete="CASCADE"), nullable=False)
 
-    parent_id = db.Column(
-        db.Integer,
-        db.ForeignKey("comments.id"),
-        nullable=True
-    )
+    parent_id = db.Column(db.Integer, db.ForeignKey("comments.id"), nullable=True)
 
-    created_at = db.Column(
-        db.DateTime,
-        default=datetime.utcnow
-    )
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
-    updated_at = db.Column(
-        db.DateTime,
-        default=datetime.utcnow,
-        onupdate=datetime.utcnow
+    user = db.relationship(
+        "User",
+        backref=db.backref("comments", lazy=True),
+        lazy=True
     )
-
-    # =========================
-    # REPLIES (THREADING)
-    # =========================
 
     parent = db.relationship(
         "Comment",
         remote_side=[id],
-        backref=db.backref(
-            "replies",
-            cascade="all, delete-orphan",
-            lazy=True
-        )
+        backref=db.backref("replies", lazy=True)
     )
-
-    # =========================
-    # COMMENT LIKES
-    # =========================
 
     likes = db.relationship(
         "CommentLike",

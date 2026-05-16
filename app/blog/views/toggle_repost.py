@@ -6,7 +6,7 @@ from flask_jwt_extended import jwt_required, get_jwt_identity
 from app.extensions import db
 from app.models.repost import Repost
 from app.models.post import Post
-
+from app.notifications.services import create_notification
 
 class ToggleRepostAPI(MethodView):
 
@@ -52,7 +52,16 @@ class ToggleRepostAPI(MethodView):
         post.reposts_count = (post.reposts_count or 0) + 1
 
         db.session.commit()
-
+        
+        # NOTIFY POST AUTHOR
+        if user_id != post.author_id:
+            create_notification(
+                actor_id=user_id,
+                user_id=post.author_id,
+                type="REPOST",
+                post_id=post.id
+            )
+            
         return jsonify({
             "message": "Post reposted",
             "reposted": True

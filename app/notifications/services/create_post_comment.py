@@ -5,13 +5,13 @@ from .utils import should_notify
 
 def create_post_comment(actor_id, post, comment):
 
-    if not should_notify(actor_id, post.author_id):
-        return None
+    if actor_id == post.author_id:
+        return  # 🚫 don't notify yourself
 
-    return create_notification(
-        user_id=post.author_id,
+    create_notification(
         actor_id=actor_id,
-        type="COMMENT_POST",
+        user_id=post.author_id,   # 🔥 THIS IS THE KEY FIX
+        type="COMMENT",
         post_id=post.id,
         comment_id=comment.id
     )
