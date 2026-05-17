@@ -7,6 +7,7 @@ from app.extensions import db
 from app.models.repost import Repost
 from app.models.post import Post
 from app.notifications.services import create_notification
+from app.notifications.constants import REPOST_POST
 
 class ToggleRepostAPI(MethodView):
 
@@ -55,10 +56,11 @@ class ToggleRepostAPI(MethodView):
         
         # NOTIFY POST AUTHOR
         if user_id != post.author_id:
+            print("🔥 NOTIF TYPE CREATED:", REPOST_POST)
             create_notification(
                 actor_id=user_id,
                 user_id=post.author_id,
-                type="REPOST",
+                type=REPOST_POST,
                 post_id=post.id
             )
             

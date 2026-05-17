@@ -3,7 +3,7 @@ from flask.views import MethodView
 from flask import jsonify
 from flask_jwt_extended import jwt_required, get_jwt_identity
 
-from app.models.notification import Notification
+from app.notifications.services.readers.get_notifications import get_notifications
 
 
 class GetNotificationsAPI(MethodView):
@@ -13,12 +13,8 @@ class GetNotificationsAPI(MethodView):
 
         user_id = int(get_jwt_identity())
 
-        notifications = Notification.query.filter_by(
-            user_id=user_id
-        ).order_by(
-            Notification.created_at.desc()
-        ).limit(50).all()
+        data = get_notifications(user_id)
 
-        return jsonify([
-            n.to_dict() for n in notifications
-        ])
+        return jsonify({
+            "notifications": data
+        })

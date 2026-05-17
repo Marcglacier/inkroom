@@ -19,15 +19,12 @@ class Post(db.Model):
     )
 
     # =========================
-    # COUNTERS (FOR PERFORMANCE)
+    # COUNTERS
     # =========================
     likes_count = db.Column(db.Integer, default=0, nullable=False)
     comments_count = db.Column(db.Integer, default=0, nullable=False)
     reposts_count = db.Column(db.Integer, default=0, nullable=False)
 
-    # =========================
-    # TIMESTAMPS
-    # =========================
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False, index=True)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
 
@@ -43,22 +40,21 @@ class Post(db.Model):
 
     comments = db.relationship(
         "Comment",
-        backref="post",
+        backref=db.backref("post_ref", lazy=True),   # FIXED NAME
         cascade="all, delete-orphan",
         lazy="dynamic"
     )
 
     likes = db.relationship(
         "Like",
-        backref="post",
+        backref=db.backref("post_ref", lazy=True),   # FIXED NAME
         cascade="all, delete-orphan",
         lazy="dynamic"
     )
 
-    # (OPTIONAL FUTURE FEATURE)
     reposts = db.relationship(
-        "Repost",
-        backref="post",
-        cascade="all, delete-orphan",
-        lazy="dynamic"
+    "Repost",
+    backref="post",
+    cascade="all, delete-orphan",
+    lazy="dynamic"
     )

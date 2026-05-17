@@ -1,6 +1,6 @@
 # app/feed/views/following_feed.py
 from flask.views import MethodView
-from flask import request, jsonify
+from flask import jsonify
 from flask_jwt_extended import jwt_required, get_jwt_identity
 
 from app.models.follow import Follow
@@ -15,53 +15,114 @@ class FollowingFeedAPI(MethodView):
 
         user_id = int(get_jwt_identity())
 
-        page = request.args.get("page", 1, type=int)
-        per_page = request.args.get("per_page", 10, type=int)
+        # =====================================
+        # STEP 1: GET FOLLOWING IDS
+        # =====================================
 
-        # STEP 1: get people I follow
         following_ids = [
             f.following_id
             for f in Follow.query.filter_by(follower_id=user_id)
         ]
 
-        # include my own posts
+        # include myself
         following_ids.append(user_id)
 
-        # STEP 2: query posts
-        posts_query = Post.query.filter(
-            Post.author_id.in_(following_ids)
-        ).order_by(Post.created_at.desc())
+        # =====================================
+        # STEP 2: FETCH POSTS
+        # =====================================
 
-        posts = posts_query.paginate(
-            page=page,
-            per_page=per_page,
-            error_out=False
+        posts = Post.query.filter(
+            Post.author_id.in_(following_ids)
+        ).all()
+
+        # =====================================
+        # STEP 3: FETCH REPOSTS
+        # =====================================
+
+        reposts = Repost.query.filter(
+            Repost.user_id.in_(following_ids)
+        ).all()
+
+        # =====================================
+        # STEP 4: BUILD FEED EVENTS
+        # =====================================
+
+        feed_events = []
+
+        # -------------------------------------
+        # ORIGINAL POSTS
+        # -------------------------------------
+
+        for post in posts:
+
+            feed_events.append({
+                "feed_type": "post",
+
+                "created_at": post.created_at,
+
+                "post": {
+                    "id": post.id,
+                    "title": post.title,
+                    "content": post.content,
+
+                    "author": {
+                        "id": post.author.id,
+                        "username": post.author.username
+                    },
+
+                    "likes_count": post.likes_count,
+                    "comments_count": post.comments_count,
+                    "reposts_count": post.reposts_count
+                }
+            })
+
+        # -------------------------------------
+        # REPOST EVENTS
+        # -------------------------------------
+
+        for repost in reposts:
+
+            post = repost.post
+
+            feed_events.append({
+                "feed_type": "repost",
+
+                "created_at": repost.created_at,
+
+                "reposted_by": {
+                    "id": repost.user.id,
+                    "username": repost.user.username
+                },
+
+                "post": {
+                    "id": post.id,
+                    "title": post.title,
+                    "content": post.content,
+
+                    "author": {
+                        "id": post.author.id,
+                        "username": post.author.username
+                    },
+
+                    "likes_count": post.likes_count,
+                    "comments_count": post.comments_count,
+                    "reposts_count": post.reposts_count
+                }
+            })
+
+        # =====================================
+        # STEP 5: SORT FEED
+        # =====================================
+
+        feed_events.sort(
+            key=lambda x: x["created_at"],
+            reverse=True
         )
 
-        # STEP 3: format response
-        data = []
-
-        for post in posts.items:
-          data.append({
-             "id": post.id,
-             "title": post.title,
-             "content": post.content,
-             "created_at": post.created_at,
-
-             "author": {
-             "id": post.author.id,
-             "username": post.author.username
-              },
-
-              # 🚀 FAST CACHED COUNTERS (NO QUERIES)
-             "likes_count": post.likes_count,
-             "comments_count": post.comments_count,
-             "reposts_count": post.reposts_count
-              })
+        # =====================================
+        # STEP 6: RETURN RESPONSE
+        # =====================================
 
         return jsonify({
-            "page": page,
-            "per_page": per_page,
-            "total": posts.total,
-            "posts": data
+            "feed": feed_events
         })

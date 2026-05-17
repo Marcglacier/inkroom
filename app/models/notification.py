@@ -1,5 +1,5 @@
+# app/models/notification.py
 from datetime import datetime
-
 from app.extensions import db
 
 
@@ -7,50 +7,69 @@ class Notification(db.Model):
     __tablename__ = "notifications"
 
     id = db.Column(db.Integer, primary_key=True)
-
+    
+    # RECEIVER (who gets notif)
     user_id = db.Column(
         db.Integer,
         db.ForeignKey("users.id"),
-        nullable=False
+        nullable=False,
+        index=True
     )
 
+    # ACTOR (who triggered it)
     actor_id = db.Column(
         db.Integer,
         db.ForeignKey("users.id"),
-        nullable=False
+        nullable=False,
+        index=True
     )
 
+    # CONTEXT OBJECTS
     post_id = db.Column(
         db.Integer,
         db.ForeignKey("posts.id"),
-        nullable=True
+        nullable=True,
+        index=True
     )
 
     comment_id = db.Column(
         db.Integer,
         db.ForeignKey("comments.id"),
-        nullable=True
+        nullable=True,
+        index=True
     )
 
+    # TYPE
     type = db.Column(
         db.String(50),
-        nullable=False
+        nullable=False,
+        index=True
     )
 
+    # STATUS
     is_read = db.Column(
         db.Boolean,
-        default=False
+        default=False,
+        nullable=False
     )
 
     created_at = db.Column(
         db.DateTime,
-        default=datetime.utcnow
+        default=datetime.utcnow,
+        nullable=False,
+        index=True
     )
 
-    # =========================
     # RELATIONSHIPS
-    # =========================
 
+    # receiver
+    user = db.relationship(
+        "User",
+        foreign_keys=[user_id],
+        backref=db.backref("notifications", lazy="dynamic")
+    )
+
+    # actor (trigger user)
     actor = db.relationship(
         "User",
         foreign_keys=[actor_id]
@@ -66,12 +85,8 @@ class Notification(db.Model):
         foreign_keys=[comment_id]
     )
 
-    # =========================
     # SERIALIZER
-    # =========================
-
     def to_dict(self):
-
         return {
             "id": self.id,
             "type": self.type,

@@ -27,23 +27,50 @@ def create_notification(**kwargs):
     print("➡️ comment_id:", kwargs.get("comment_id"))
 
     # =====================================
-    # DUPLICATE PREVENTION
+    # GROUP / DEDUPE CHECK
     # =====================================
     if notif_type in DEDUPE_TYPES:
 
-        print("⚠️ [NOTIF DEBUG] Dedup check enabled for:", notif_type)
+        print("⚠️ [NOTIF DEBUG] Dedup/grouping enabled for:", notif_type)
 
         existing = Notification.query.filter_by(
             user_id=kwargs.get("user_id"),
-            actor_id=kwargs.get("actor_id"),
             type=notif_type,
             post_id=kwargs.get("post_id"),
             comment_id=kwargs.get("comment_id"),
             is_read=False
         ).first()
 
+        # =====================================
+        # UPDATE EXISTING GROUP
+        # =====================================
         if existing:
-            print("⚠️ [NOTIF DEBUG] DUPLICATE FOUND → returning existing ID:", existing.id)
+
+            print("⚠️ [NOTIF DEBUG] EXISTING GROUP FOUND")
+            print("➡️ Existing ID:", existing.id)
+
+            actors = []
+
+            # safe read of existing grouping data
+            if existing.extra and isinstance(existing.extra, dict):
+                actors = existing.extra.get("actors", [])
+
+            print("➡️ Previous actors:", actors)
+
+            new_actor = kwargs.get("actor_id")
+
+            if new_actor not in actors:
+                actors.append(new_actor)
+                print("🟡 [NOTIF DEBUG] Added new actor:", new_actor)
+            else:
+                print("ℹ️ [NOTIF DEBUG] Actor already in group")
+
+            existing.extra = existing.extra or {}
+            existing.extra["actors"] = actors
+
+            db.session.commit()
+
+            print("✅ [NOTIF DEBUG] Updated grouped notification:", existing.id)
             return existing
 
     # =====================================
@@ -53,9 +80,14 @@ def create_notification(**kwargs):
 
     notif = Notification(**kwargs)
 
+    notif.extra = {
+        "actors": [kwargs.get("actor_id")]
+    }
+
     db.session.add(notif)
     db.session.commit()
 
     print("✅ [NOTIF DEBUG] Saved notification ID:", notif.id)
+    print("➡️ Initial actors:", notif.extra["actors"])
 
     return notif

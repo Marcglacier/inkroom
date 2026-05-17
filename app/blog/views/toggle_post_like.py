@@ -6,6 +6,7 @@ from flask_jwt_extended import jwt_required, get_jwt_identity
 from app.services.post_like_service import toggle_like
 from app.notifications.services import create_notification
 from app.models.post import Post
+from app.notifications.constants import LIKE_POST
 
 class TogglePostLikeAPI(MethodView):
 
@@ -19,10 +20,11 @@ class TogglePostLikeAPI(MethodView):
         if liked:
             # NOTIFY POST AUTHOR
             if user_id != post.author_id:
+                print("🔥 NOTIF TYPE CREATED:", LIKE_POST)
                 create_notification(
                     actor_id=user_id,
                     user_id=post.author_id,
-                    type="LIKE",
+                    type=LIKE_POST,
                     post_id=post.id
                 )
 
