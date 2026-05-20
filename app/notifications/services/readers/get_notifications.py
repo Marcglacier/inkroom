@@ -25,7 +25,7 @@ def get_notifications(user_id):
     for group in grouped:
 
         # 🧠 DEBUG: ensure structure is correct
-        print("🧩 GROUP DEBUG:", group)
+
 
         # 🔥 SAFETY CHECK (prevents future silent crashes)
         if "type" not in group or "actors" not in group:

@@ -50,9 +50,6 @@ def build_notification_message(group):
         LIKE_COMMENT: "liked your comment"
     }
 
-    print("🔥 TYPE RECEIVED:", notif_type)
-    print("🔥 ACTORS:", actors)
-
     action = message_map.get(
         notif_type,
         "interacted with you"
