@@ -7,51 +7,40 @@ class Notification(db.Model):
     __tablename__ = "notifications"
 
     id = db.Column(db.Integer, primary_key=True)
-    
-    # RECEIVER (who gets notif)
+
+    # RECEIVER
     user_id = db.Column(
         db.Integer,
-        db.ForeignKey("users.id"),
+        db.ForeignKey("users.id", ondelete="CASCADE"),
         nullable=False,
         index=True
     )
 
-    # ACTOR (who triggered it)
+    # ACTOR
     actor_id = db.Column(
         db.Integer,
-        db.ForeignKey("users.id"),
-        nullable=False,
+        db.ForeignKey("users.id", ondelete="SET NULL"),
+        nullable=True,
         index=True
     )
 
-    # CONTEXT OBJECTS
     post_id = db.Column(
         db.Integer,
-        db.ForeignKey("posts.id"),
+        db.ForeignKey("posts.id", ondelete="CASCADE"),
         nullable=True,
         index=True
     )
 
     comment_id = db.Column(
         db.Integer,
-        db.ForeignKey("comments.id"),
+        db.ForeignKey("comments.id", ondelete="CASCADE"),
         nullable=True,
         index=True
     )
 
-    # TYPE
-    type = db.Column(
-        db.String(50),
-        nullable=False,
-        index=True
-    )
+    type = db.Column(db.String(50), nullable=False, index=True)
 
-    # STATUS
-    is_read = db.Column(
-        db.Boolean,
-        default=False,
-        nullable=False
-    )
+    is_read = db.Column(db.Boolean, default=False, nullable=False)
 
     created_at = db.Column(
         db.DateTime,
@@ -61,31 +50,21 @@ class Notification(db.Model):
     )
 
     # RELATIONSHIPS
-
-    # receiver
     user = db.relationship(
         "User",
         foreign_keys=[user_id],
-        backref=db.backref("notifications", lazy="dynamic")
+        backref=db.backref("notifications", lazy="dynamic", cascade="all, delete")
     )
 
-    # actor (trigger user)
     actor = db.relationship(
         "User",
-        foreign_keys=[actor_id]
+        foreign_keys=[actor_id],
+        passive_deletes=True
     )
 
-    post = db.relationship(
-        "Post",
-        foreign_keys=[post_id]
-    )
+    post = db.relationship("Post", foreign_keys=[post_id])
+    comment = db.relationship("Comment", foreign_keys=[comment_id])
 
-    comment = db.relationship(
-        "Comment",
-        foreign_keys=[comment_id]
-    )
-
-    # SERIALIZER
     def to_dict(self):
         return {
             "id": self.id,

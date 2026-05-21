@@ -1,53 +1,53 @@
 # app/models/user.py
 from datetime import datetime
-from app.extensions import db
 from werkzeug.security import generate_password_hash, check_password_hash
+from app.extensions import db
 
 
 class User(db.Model):
     __tablename__ = "users"
 
+    # ================= CORE =================
     id = db.Column(db.Integer, primary_key=True)
-
-    username = db.Column(db.String(50), unique=True, nullable=False)
+    username = db.Column(db.String(80), unique=True, nullable=False)
     email = db.Column(db.String(120), unique=True, nullable=False)
+    password_hash = db.Column(db.Text)
+    provider = db.Column(db.String(20), default="local")
+    google_id = db.Column(db.String(255))
 
-    password_hash = db.Column(db.String(255), nullable=True)
-
-    provider = db.Column(db.String(50), default="local")
-    google_id = db.Column(db.String(255), unique=True, nullable=True, index=True)
-
+    # ================= EMAIL VERIFICATION =================
     email_verified = db.Column(db.Boolean, default=False)
+    verification_token = db.Column(db.String(255))
+    verification_token_expiry = db.Column(db.DateTime)
+    email_verification_code = db.Column(db.String(6))
+    email_verification_expiry = db.Column(db.DateTime)
+    # ================= SECURITY =================
+    reset_token = db.Column(db.String(255))
+    reset_token_expiry = db.Column(db.DateTime)
 
+
+    # ================= PROFILE =================
+    bio = db.Column(db.Text, default="")
+    location = db.Column(db.String(120), default="")
+    is_private = db.Column(db.Boolean, default=False)
+    profile_picture = db.Column(db.Text)
+
+    # ================= STATUS =================
+    online = db.Column(db.Boolean, default=False)
+    last_seen = db.Column(db.DateTime, default=datetime.utcnow)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
-    # =========================
-    # PASSWORD RESET
-    # =========================
+    # ================= RELATIONSHIPS =================
+    messages_sent = db.relationship(
+        "Message",
+        foreign_keys="Message.sender_id",
+        cascade="all, delete-orphan",
+        passive_deletes=True
+    )
 
-    reset_token = db.Column(db.String(255), nullable=True)
-    reset_token_expiry = db.Column(db.DateTime, nullable=True)
-
-    # =========================
-    # PROFILE
-    # =========================
-
-    bio = db.Column(db.Text, default="")
-    location = db.Column(db.String(100), nullable=True)
-    is_private = db.Column(db.Boolean, default=False)
-
-    profile_picture = db.Column(db.String(255), nullable=True)
-
-    # =========================
-    # PASSWORD HELPERS
-    # =========================
-
+    # ================= AUTH =================
     def set_password(self, password):
         self.password_hash = generate_password_hash(password)
 
     def check_password(self, password):
-        return bool(self.password_hash) and check_password_hash(self.password_hash, password)
-    
-    online = db.Column(db.Boolean, default=False)
-    last_seen = db.Column(db.DateTime, nullable=True)
-    # =========================
+        return check_password_hash(self.password_hash, password)

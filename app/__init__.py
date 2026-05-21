@@ -20,12 +20,13 @@ import app.realtime
 from .models import *
 
 from flask_cors import CORS
+from .extensions import mail
 
 
 def create_app():
     app = Flask(__name__)
     app.config.from_object(Config)
-
+    
     # =========================
     # CORS
     # =========================
@@ -41,6 +42,7 @@ def create_app():
     db.init_app(app)
     migrate.init_app(app, db)
     jwt.init_app(app)
+    mail.init_app(app)
     socketio.init_app(app)
     oauth.init_app(app)
 
