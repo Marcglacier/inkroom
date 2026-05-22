@@ -1,6 +1,5 @@
-# app/auth/views/google_callback.py
 from flask.views import MethodView
-from flask import jsonify
+from flask import redirect
 from flask_jwt_extended import create_access_token
 
 from app.extensions import oauth, db
@@ -10,11 +9,9 @@ from app.models.user import User
 class GoogleCallbackAPI(MethodView):
 
     def get(self):
-
-        google = oauth.create_client("google")
+        google = oauth.google
 
         token = google.authorize_access_token()
-
         user_info = token["userinfo"]
 
         email = user_info["email"]
@@ -26,18 +23,15 @@ class GoogleCallbackAPI(MethodView):
             user = User(
                 email=email,
                 username=username,
-                google_id=user_info["sub"]
+                google_id=user_info["sub"],
+                email_verified=True
             )
             db.session.add(user)
             db.session.commit()
 
         access_token = create_access_token(identity=str(user.id))
 
-        return jsonify({
-            "token": access_token,
-            "user": {
-                "id": user.id,
-                "email": user.email,
-                "username": user.username
-            }
-        })
+        # 🔥 REDIRECT WITH TOKEN (CRITICAL
+        return redirect(
+    f"http://localhost:5173/oauth-success?token={access_token}"
+     )

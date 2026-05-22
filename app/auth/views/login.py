@@ -18,6 +18,9 @@ class LoginAPI(MethodView):
         user = User.query.filter_by(email=email).first()
         if user is None or not user.check_password(password):
             return jsonify({"error": "Invalid credentials"}), 401
+        
+        if not user.email_verified:
+            return jsonify({"message": "Please verify your email first"}), 403
 
         token = create_access_token(identity=str(user.id))
         return jsonify({

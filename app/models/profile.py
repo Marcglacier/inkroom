@@ -20,9 +20,16 @@ class Profile(db.Model):
         default=""
     )
 
+    # 🔒 SELF ONLY
     location = db.Column(
         db.String(100),
         default=""
+    )
+
+    # 🔒 SELF ONLY
+    birthday = db.Column(
+        db.Date,
+        nullable=True
     )
 
     avatar_url = db.Column(

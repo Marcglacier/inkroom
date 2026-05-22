@@ -1,5 +1,5 @@
+# app/models/notification.py
 from datetime import datetime
-
 from app.extensions import db
 
 
@@ -8,70 +8,64 @@ class Notification(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
 
+    # RECEIVER
     user_id = db.Column(
         db.Integer,
-        db.ForeignKey("users.id"),
-        nullable=False
+        db.ForeignKey("users.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True
     )
 
+    # ACTOR
     actor_id = db.Column(
         db.Integer,
-        db.ForeignKey("users.id"),
-        nullable=False
+        db.ForeignKey("users.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True
     )
 
     post_id = db.Column(
         db.Integer,
-        db.ForeignKey("posts.id"),
-        nullable=True
+        db.ForeignKey("posts.id", ondelete="CASCADE"),
+        nullable=True,
+        index=True
     )
 
     comment_id = db.Column(
         db.Integer,
-        db.ForeignKey("comments.id"),
-        nullable=True
+        db.ForeignKey("comments.id", ondelete="CASCADE"),
+        nullable=True,
+        index=True
     )
 
-    type = db.Column(
-        db.String(50),
-        nullable=False
-    )
+    type = db.Column(db.String(50), nullable=False, index=True)
 
-    is_read = db.Column(
-        db.Boolean,
-        default=False
-    )
+    is_read = db.Column(db.Boolean, default=False, nullable=False)
 
     created_at = db.Column(
         db.DateTime,
-        default=datetime.utcnow
+        default=datetime.utcnow,
+        nullable=False,
+        index=True
     )
 
-    # =========================
     # RELATIONSHIPS
-    # =========================
+    user = db.relationship(
+        "User",
+        foreign_keys=[user_id],
+        backref=db.backref("notifications", lazy="dynamic", cascade="all, delete")
+    )
 
     actor = db.relationship(
         "User",
-        foreign_keys=[actor_id]
+        foreign_keys=[actor_id],
+        passive_deletes=True
     )
 
-    post = db.relationship(
-        "Post",
-        foreign_keys=[post_id]
-    )
-
-    comment = db.relationship(
-        "Comment",
-        foreign_keys=[comment_id]
-    )
-
-    # =========================
-    # SERIALIZER
-    # =========================
+    post = db.relationship("Post", foreign_keys=[post_id])
+    comment = db.relationship("Comment", foreign_keys=[comment_id])
 
     def to_dict(self):
-
         return {
             "id": self.id,
             "type": self.type,

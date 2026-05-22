@@ -7,5 +7,12 @@ from app.extensions import oauth
 class GoogleAPI(MethodView):
 
     def get(self):
-        redirect_uri = url_for("auth.google_callback", _external=True)
-        return oauth.google.authorize_redirect(redirect_uri)
+        redirect_uri = url_for(
+            "auth.google_callback",
+            _external=True
+        )
+
+        return oauth.google.authorize_redirect(
+            redirect_uri,
+            prompt="consent select_account"
+        )

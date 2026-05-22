@@ -16,6 +16,9 @@ from .views.request_reset import RequestResetAPI
 from .views.google import GoogleAPI
 from .views.google_callback import GoogleCallbackAPI
 
+# email verification
+from .views.verify_email import VerifyEmailAPI
+from .views.resend_code import ResendCodeAPI
 
 auth_bp = Blueprint("auth", __name__, url_prefix="/api/auth")
 
@@ -52,4 +55,15 @@ auth_bp.add_url_rule(
 auth_bp.add_url_rule(
     "/google/callback",
     view_func=GoogleCallbackAPI.as_view("google_callback")
+)
+
+# Email Verification
+auth_bp.add_url_rule(
+    "/verify-email",
+    view_func=VerifyEmailAPI.as_view("verify_email")
+)
+
+auth_bp.add_url_rule(
+    "/resend-code",
+    view_func=ResendCodeAPI.as_view("resend_code")
 )

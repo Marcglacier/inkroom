@@ -3,7 +3,8 @@ from flask.views import MethodView
 from flask import request, jsonify
 from flask_jwt_extended import jwt_required, get_jwt_identity
 
-from app.services.post_service import create_post
+from app.extensions import db
+from app.models.post import Post
 
 
 class CreatePostAPI(MethodView):
@@ -11,20 +12,29 @@ class CreatePostAPI(MethodView):
     @jwt_required()
     def post(self):
 
+        user_id = int(get_jwt_identity())
         data = request.get_json()
 
-        post, error = create_post(
-            int(get_jwt_identity()),
-            data.get("title"),
-            data.get("content")
+        title = data.get("title")
+        content = data.get("content")
+
+        if not title or not content:
+            return jsonify({
+                "error": "title and content are required"
+            }), 400
+
+        post = Post(
+            title=title,
+            content=content,
+            author_id=user_id   # ✅ FIXED
         )
 
-        if error:
-            return jsonify({"error": error}), 400
+        db.session.add(post)
+        db.session.commit()
 
         return jsonify({
             "id": post.id,
             "title": post.title,
-            "content": post.content
+            "content": post.content,
+            "author_id": post.author_id
         }), 201
-    

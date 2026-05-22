@@ -10,16 +10,20 @@ def get_profile(viewer_id, user_id):
     user = User.query.get_or_404(user_id)
 
     profile = Profile.query.filter_by(user_id=user_id).first()
+
     if not profile:
         profile = Profile(user_id=user_id)
         db.session.add(profile)
         db.session.commit()
 
-    # FOLLOW COUNTS
-    followers_count = Follow.query.filter_by(following_id=user_id).count()
-    following_count = Follow.query.filter_by(follower_id=user_id).count()
+    followers_count = Follow.query.filter_by(
+        following_id=user_id
+    ).count()
 
-    # RELATIONSHIP (viewer ↔ target)
+    following_count = Follow.query.filter_by(
+        follower_id=user_id
+    ).count()
+
     viewer_follows = Follow.query.filter_by(
         follower_id=viewer_id,
         following_id=user_id
@@ -30,7 +34,9 @@ def get_profile(viewer_id, user_id):
         following_id=viewer_id
     ).first() is not None
 
-    if viewer_id == user_id:
+    is_self = viewer_id == user_id
+
+    if is_self:
         relationship = "self"
     elif viewer_follows and target_follows:
         relationship = "mutual"
@@ -41,41 +47,38 @@ def get_profile(viewer_id, user_id):
     else:
         relationship = "none"
 
-    is_following = viewer_follows
-    is_followed_by = target_follows
     is_requested = FollowRequest.query.filter_by(
         requester_id=viewer_id,
         target_id=user_id
     ).first() is not None
 
-    # RESPONSE
     data = {
         "id": user.id,
         "username": user.username,
         "bio": profile.bio,
-        "location": profile.location,
         "followers": followers_count,
         "following": following_count,
-        "joined_at": user.created_at,
         "is_private": profile.is_private,
 
+        # 🔒 SELF ONLY
+        "location": profile.location if is_self else None,
+        "birthday": profile.birthday if is_self else None,
+        "joined_at": user.created_at if is_self else None,
+
         "relationship": relationship,
-        "is_following": is_following,
-        "is_followed_by": is_followed_by,
+        "is_following": viewer_follows,
+        "is_followed_by": target_follows,
         "is_requested": is_requested,
 
-        "can_message": is_following and is_followed_by
+        "can_message": viewer_follows and target_follows
     }
 
-    # PRIVACY RULES
-    if profile.is_private and not is_following and viewer_id != user_id:
+    if profile.is_private and not viewer_follows and not is_self:
         data["bio"] = None
-        data["location"] = None
         data["visibility"] = "limited"
 
     return data
 
-# PROFILE UPDATE (PRIVATE TOGGLE ENABLED)
 def update_profile(user_id, data):
 
     profile = Profile.query.filter_by(user_id=user_id).first()
@@ -87,6 +90,9 @@ def update_profile(user_id, data):
     profile.bio = data.get("bio", profile.bio)
     profile.location = data.get("location", profile.location)
     profile.avatar_url = data.get("avatar_url", profile.avatar_url)
+
+    if "birthday" in data:
+        profile.birthday = data["birthday"]
 
     if "is_private" in data:
         profile.is_private = bool(data["is_private"])

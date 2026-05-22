@@ -5,9 +5,11 @@ from flask_migrate import Migrate
 from flask_jwt_extended import JWTManager
 from flask_socketio import SocketIO
 from authlib.integrations.flask_client import OAuth
+from flask_mail import Mail
 
 db = SQLAlchemy()
 migrate = Migrate()
 jwt = JWTManager()
 socketio = SocketIO(cors_allowed_origins="*")
 oauth = OAuth()
+mail = Mail()

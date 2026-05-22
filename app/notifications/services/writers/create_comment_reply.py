@@ -1,7 +1,7 @@
 # app/notifications/services/create_comment_reply.py
 from .create_notification import create_notification
 from .utils import should_notify
-
+from app.notifications.constants import COMMENT_POST
 
 def create_comment_reply(actor_id, parent_comment, reply_comment):
 
@@ -11,7 +11,7 @@ def create_comment_reply(actor_id, parent_comment, reply_comment):
     return create_notification(
         user_id=parent_comment.user_id,
         actor_id=actor_id,
-        type="REPLY_COMMENT",
+        type=COMMENT_POST,
         post_id=reply_comment.post_id,
         comment_id=reply_comment.id
     )
