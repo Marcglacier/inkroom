@@ -50,15 +50,16 @@ class RegisterAPI(MethodView):
             is_private=is_private,
             email_verified=False,
             email_verification_code=code,
-            email_verification_expiry=expiry
+            email_verification_expiry=expiry,
+            name=None  # 👑 leave blank so frontend detects incomplete scroll
         )
-
         user.set_password(password)
 
         db.session.add(user)
         db.session.flush()
 
-        db.session.add(Profile(user_id=user.id, is_private=is_private))
+        # 👑 create profile with empty bio
+        db.session.add(Profile(user_id=user.id, is_private=is_private, bio=None))
         db.session.commit()
 
         # ================= SEND EMAIL =================
@@ -68,7 +69,6 @@ class RegisterAPI(MethodView):
             recipients=[email],
             body=f"Your InkRoom verification code is: {code}\nExpires in 10 minutes."
         )
-
         mail.send(msg)
 
         return jsonify({

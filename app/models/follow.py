@@ -1,8 +1,6 @@
 # app/models/follow.py
 from datetime import datetime
 from app.extensions import db
-from app.models import user
-
 
 class Follow(db.Model):
     __tablename__ = "follows"
@@ -26,6 +24,19 @@ class Follow(db.Model):
         default=datetime.utcnow
     )
 
+    # NEW: accepted flag
+    accepted = db.Column(
+        db.Boolean,
+        default=False,
+        nullable=False
+    )
+
+    # status can still be used for readability
+    status = db.Column(
+        db.String(20),
+        default="requested"  # requested | following
+    )
+
     __table_args__ = (
         db.UniqueConstraint(
             "follower_id",
@@ -35,5 +46,3 @@ class Follow(db.Model):
         db.Index("idx_follower_id", "follower_id"),
         db.Index("idx_following_id", "following_id"),
     )
-
-    status = db.Column(db.String(20), default="following")  # following | requested
