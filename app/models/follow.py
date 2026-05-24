@@ -1,6 +1,7 @@
 # app/models/follow.py
-from datetime import datetime
+from datetime import datetime, timezone
 from app.extensions import db
+
 
 class Follow(db.Model):
     __tablename__ = "follows"
@@ -21,20 +22,27 @@ class Follow(db.Model):
 
     created_at = db.Column(
         db.DateTime,
-        default=datetime.utcnow
+        default=lambda: datetime.now(timezone.utc)
     )
 
-    # NEW: accepted flag
-    accepted = db.Column(
-        db.Boolean,
-        default=False,
+    # requested → accepted → blocked
+    status = db.Column(
+        db.String(20),
+        default="requested",
         nullable=False
     )
 
-    # status can still be used for readability
-    status = db.Column(
-        db.String(20),
-        default="requested"  # requested | following
+    # relationships
+    follower = db.relationship(
+        "User",
+        foreign_keys=[follower_id],
+        backref="following_relationships"
+    )
+
+    following = db.relationship(
+        "User",
+        foreign_keys=[following_id],
+        backref="follower_relationships"
     )
 
     __table_args__ = (
