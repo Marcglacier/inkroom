@@ -16,12 +16,16 @@ def global_search(query):
 
     like_query = f"%{query}%"
 
+    # =========================
     # USERS
+    # =========================
     users = User.query.filter(
         User.username.ilike(like_query)
     ).limit(10).all()
 
+    # =========================
     # POSTS
+    # =========================
     posts = Post.query.filter(
         or_(
             Post.title.ilike(like_query),
@@ -29,14 +33,19 @@ def global_search(query):
         )
     ).limit(20).all()
 
-    # COMMENTS + REPLIES
+    # =========================
+    # COMMENTS
+    # =========================
     comments = Comment.query.filter(
         Comment.content.ilike(like_query)
     ).limit(20).all()
 
+    # =========================
+    # RESPONSE
+    # =========================
     return {
-  
-        # USERS 
+
+        # USERS
         "users": [
             {
                 "id": user.id,
@@ -64,7 +73,7 @@ def global_search(query):
             for post in posts
         ],
 
-        # COMMENTS
+        # COMMENTS (UPDATED 👇)
         "comments": [
             {
                 "id": comment.id,
@@ -75,14 +84,14 @@ def global_search(query):
                     "username": comment.user.username
                 },
 
+                # 🔥 FULL POST CONTEXT (IMPORTANT FOR NAVIGATION)
                 "post": {
                     "id": comment.post.id,
                     "title": comment.post.title
                 },
 
-                # 🔥 tells frontend if reply
+                # 🔥 UX FLAGS
                 "is_reply": comment.parent_id is not None,
-
                 "parent_id": comment.parent_id
             }
             for comment in comments

@@ -11,7 +11,7 @@ def get_following(user_id):
         .join(Follow, Follow.following_id == User.id)
         .filter(
             Follow.follower_id == user_id,
-            Follow.accepted.is_(True)
+            Follow.status == "accepted"
         )
         .all()
     )
