@@ -52,7 +52,7 @@ def create_notification(**kwargs):
             actors = []
 
             # safe read of existing grouping data
-            if existing.extra and isinstance(existing.extra, dict):
+            if hasattr(existing, "extra") and existing.extra and isinstance(existing.extra, dict):
                 actors = existing.extra.get("actors", [])
 
             print("➡️ Previous actors:", actors)

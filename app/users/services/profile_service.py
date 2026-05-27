@@ -4,10 +4,12 @@ from app.models.follow import Follow
 from app.extensions import db
 from datetime import datetime
 
+
 def get_profile(viewer_id, user_id):
     user = User.query.get_or_404(user_id)
 
     profile = Profile.query.filter_by(user_id=user_id).first()
+
     if not profile:
         profile = Profile(user_id=user_id)
         db.session.add(profile)
@@ -16,28 +18,28 @@ def get_profile(viewer_id, user_id):
     is_self = viewer_id == user_id
 
     # =========================
-    # FOLLOW DATA (ONLY ACCEPTED)
+    # FOLLOW DATA (following)
     # =========================
     followers_count = Follow.query.filter_by(
         following_id=user_id,
-        status="accepted"
+        status="following"
     ).count()
 
     following_count = Follow.query.filter_by(
         follower_id=user_id,
-        status="accepted"
+        status="following"
     ).count()
 
     viewer_follows = Follow.query.filter_by(
         follower_id=viewer_id,
         following_id=user_id,
-        status="accepted"
+        status="following"
     ).first() is not None
 
     target_follows = Follow.query.filter_by(
         follower_id=user_id,
         following_id=viewer_id,
-        status="accepted"
+        status="following"
     ).first() is not None
 
     relationship = (
@@ -59,10 +61,12 @@ def get_profile(viewer_id, user_id):
     # =========================
     joined_at = None
     if user.created_at:
-          joined_at = user.created_at.strftime("%B %Y")   # e.g. "May 2026"
+        joined_at = user.created_at.strftime("%B %Y")
+
     print("JOINED_AT DEBUG:", joined_at)
+
     # =========================
-    # RESPONSE
+    # BASE RESPONSE
     # =========================
     data = {
         "id": user.id,
@@ -84,20 +88,28 @@ def get_profile(viewer_id, user_id):
 
         "can_message": viewer_follows and target_follows,
 
-        # 👇 ALWAYS allow self view
-        "location": profile.location if is_self else None,
-        "birthday": profile.birthday.isoformat() if (is_self and profile.birthday) else None,
         "joined_at": joined_at,
     }
 
     # =========================
-    # PRIVACY RULES
+    # PRIVATE DATA RULES
+    # =========================
+    if is_self:
+        data["location"] = profile.location
+        data["birthday"] = profile.birthday.isoformat() if profile.birthday else None
+    else:
+        data["location"] = None
+        data["birthday"] = None
+
+    # =========================
+    # SOCIAL LINKS (FIXED)
+    # ALWAYS ARRAY
     # =========================
     if profile.is_private and not is_self and not viewer_follows:
-        data["social_links"] = {}
+        data["social_links"] = []
         data["bio"] = None
     else:
-        data["social_links"] = profile.social_links or {}
+        data["social_links"] = profile.social_links or []
 
     return data
 

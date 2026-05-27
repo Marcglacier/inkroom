@@ -12,6 +12,7 @@ from .views.upload_avatar import UploadAvatarAPI
 from .views.unfollow_user import UnfollowUserAPI
 from .views.get_following import GetFollowingAPI
 from .views.get_user_by_username import GetUserByUsernameAPI
+from .views.relationship_view import RelationshipAPI
 
 users_bp = Blueprint("users", __name__, url_prefix="/api/users")
 
@@ -61,4 +62,9 @@ users_bp.add_url_rule("/upload",
 users_bp.add_url_rule(
     "/<string:username>",
     view_func=GetUserByUsernameAPI.as_view("get_user_by_username")
+)
+
+users_bp.add_url_rule(
+    "/<int:user_id>/relationship",
+    view_func=RelationshipAPI.as_view("relationship")
 )

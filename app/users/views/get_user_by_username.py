@@ -1,27 +1,41 @@
-# app/users/views/get_user_by_username.py
-
 from flask.views import MethodView
-from flask import jsonify
+from flask_jwt_extended import jwt_required, get_jwt_identity
 
 from app.models.user import User
-from app.models.profile import Profile
+from app.users.services.profile_service import get_profile
 
 
 class GetUserByUsernameAPI(MethodView):
 
+    @jwt_required()
     def get(self, username):
+
+        print("\n============================")
+        print("🔥 GetUserByUsernameAPI HIT")
+        print("🔥 USERNAME:", username)
+
+        # AUTH USER
+        viewer_id = int(get_jwt_identity())
+        print("🔥 VIEWER ID:", viewer_id)
+
+        # TARGET USER
         user = User.query.filter_by(username=username).first()
 
         if not user:
-            return jsonify({
+            print("❌ USER NOT FOUND")
+            return {
                 "message": "User not found"
-            }), 404
+            }, 404
 
-        profile = Profile.query.filter_by(user_id=user.id).first()
+        print("✅ TARGET USER:", user.username)
+        print("✅ TARGET USER ID:", user.id)
 
-        return jsonify({
-            "id": user.id,
-            "username": user.username,
-            "name": user.name,
-            "avatar_url": profile.avatar_url if profile else None,
-        })
+        # USE MAIN PROFILE SERVICE
+        profile_data = get_profile(viewer_id, user.id)
+
+        print("📦 FINAL PROFILE RESPONSE:")
+        print(profile_data)
+
+        print("============================\n")
+
+        return profile_data

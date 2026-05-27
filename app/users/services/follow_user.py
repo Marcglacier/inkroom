@@ -32,28 +32,37 @@ def follow_user(user_id, target_id):
     if not user:
         return {"error": "User not found"}, 404
 
-    # 🔥 SOURCE OF TRUTH: PROFILE PRIVACY
     profile = Profile.query.filter_by(user_id=target_id).first()
     is_private = profile.is_private if profile else False
 
     log(f"TARGET USER FOUND, is_private={is_private}")
 
-    # check existing follow
+    # =========================
+    # CHECK EXISTING FOLLOW
+    # =========================
     follow = Follow.query.filter_by(
         follower_id=user_id,
         following_id=target_id
     ).first()
 
+    # =========================
+    # IF ALREADY FOLLOWING → UNFOLLOW (TOGGLE)
+    # =========================
     if follow:
+        db.session.delete(follow)
+        db.session.commit()
+
+        log("❌ UNFOLLOWED USER")
+
         return response(
-            "Already following",
-            "following",
+            "Unfollowed user",
+            "none",
             follower_id=user_id,
             following_id=target_id
         )
 
     # =========================
-    # PRIVATE ACCOUNT FLOW
+    # PRIVATE ACCOUNT → REQUEST FLOW
     # =========================
     if is_private:
 
@@ -64,10 +73,16 @@ def follow_user(user_id, target_id):
             target_id=target_id
         ).first()
 
+        # TOGGLE: cancel request if already exists
         if req:
+            db.session.delete(req)
+            db.session.commit()
+
+            log("❌ FOLLOW REQUEST CANCELED")
+
             return response(
-                "Request already sent",
-                "requested",
+                "Follow request canceled",
+                "none",
                 follower_id=user_id,
                 following_id=target_id
             )
@@ -85,7 +100,8 @@ def follow_user(user_id, target_id):
             target_user_id=target_id
         )
 
-        # ✅ IMPORTANT: THIS IS REQUEST, NOT FOLLOW
+        log("📩 FOLLOW REQUEST SENT")
+
         return response(
             "Follow request sent",
             "requested",
@@ -94,11 +110,12 @@ def follow_user(user_id, target_id):
         )
 
     # =========================
-    # PUBLIC ACCOUNT FLOW
+    # PUBLIC ACCOUNT → DIRECT FOLLOW
     # =========================
     follow = Follow(
         follower_id=user_id,
-        following_id=target_id
+        following_id=target_id,
+        status="following"
     )
 
     db.session.add(follow)
@@ -108,6 +125,8 @@ def follow_user(user_id, target_id):
         actor_id=user_id,
         target_user_id=target_id
     )
+
+    log("✅ FOLLOW CREATED")
 
     return response(
         "User followed",

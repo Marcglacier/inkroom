@@ -64,6 +64,7 @@ class Notification(db.Model):
 
     post = db.relationship("Post", foreign_keys=[post_id])
     comment = db.relationship("Comment", foreign_keys=[comment_id])
+    extra = db.Column(db.JSON, nullable=True)
 
     def to_dict(self):
         return {
