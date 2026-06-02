@@ -67,24 +67,27 @@ class Notification(db.Model):
     extra = db.Column(db.JSON, nullable=True)
 
     def to_dict(self):
-        return {
-            "id": self.id,
-            "type": self.type,
-            "is_read": self.is_read,
-            "created_at": self.created_at.isoformat(),
+     return {
+        "id": self.id,
+        "type": self.type,
+        "is_read": self.is_read,
+        "created_at": self.created_at.isoformat(),
 
-            "actor": {
-                "id": self.actor.id,
-                "username": self.actor.username
-            } if self.actor else None,
+        "actor": {
+            "id": self.actor.id,
+            "username": self.actor.username,
+            "avatar": getattr(self.actor, "avatar_url", None)
+        } if self.actor else None,
 
-            "post": {
-                "id": self.post.id,
-                "title": self.post.title
-            } if self.post else None,
+        "post": {
+            "id": self.post.id,
+            "title": self.post.title
+        } if self.post else None,
 
-            "comment": {
-                "id": self.comment.id,
-                "content": self.comment.content
-            } if self.comment else None
-        }
+        "comment": {
+            "id": self.comment.id,
+            "content": self.comment.content
+        } if self.comment else None,
+
+        "extra": self.extra
+    }
