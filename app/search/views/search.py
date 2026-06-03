@@ -10,6 +10,10 @@ class SearchAPI(MethodView):
 
     @jwt_required()
     def get(self):
+
+        print("===== SEARCH REQUEST =====")
+        print("QUERY:", request.args.get("q"))
+
         debug_jwt("SEARCH ROUTE")
 
         query = request.args.get("q", "")

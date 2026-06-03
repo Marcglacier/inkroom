@@ -2,7 +2,7 @@ from flask.views import MethodView
 from flask import jsonify
 from flask_jwt_extended import jwt_required, get_jwt_identity
 
-from app.users.services.get_following import get_following
+from app.users.social.services.get_following import get_following
 
 from app.models.follow import Follow
 from app.models.profile import Profile

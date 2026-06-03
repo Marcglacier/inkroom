@@ -1,18 +1,18 @@
 # app/users/routes.py
-# app/users/routes.py
+
 from flask import Blueprint
-from .views.follow_user import FollowUserAPI
-from .views.get_followers import GetFollowersAPI
-from .views.get_profile import GetProfileAPI
-from .views.update_profile import UpdateProfileAPI
-from .views.follow_requests import FollowRequestsAPI
-from .views.accept_follow import AcceptFollowAPI
-from .views.reject_follow import RejectFollowAPI
-from .views.upload_avatar import UploadAvatarAPI
-from .views.unfollow_user import UnfollowUserAPI
-from .views.get_following import GetFollowingAPI
-from .views.get_user_by_username import GetUserByUsernameAPI
-from .views.relationship_view import RelationshipAPI
+from .social.views.follow_user import FollowUserAPI
+from .social.views.get_followers import GetFollowersAPI
+from .profile.views.get_profile import GetProfileAPI
+from .profile.views.update_profile import UpdateProfileAPI
+from .social.views.follow_requests import FollowRequestsAPI
+from .social.views.accept_follow import AcceptFollowAPI
+from .social.views.reject_follow import RejectFollowAPI
+from .social.views.upload_avatar import UploadAvatarAPI
+from .social.views.unfollow_user import UnfollowUserAPI
+from .social.views.get_following import GetFollowingAPI
+from .profile.views.get_user_by_username import GetUserByUsernameAPI
+from .social.views.relationship_view import RelationshipAPI
 
 users_bp = Blueprint("users", __name__, url_prefix="/api/users")
 

@@ -4,7 +4,7 @@ from flask.views import MethodView
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from flask import jsonify
 
-from app.users.services import accept_follow
+from app.users.social.services import accept_follow
 
 
 class AcceptFollowAPI(MethodView):

@@ -3,7 +3,7 @@ from flask.views import MethodView
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from flask import jsonify
 
-from app.users.services import unfollow_user
+from app.users.social.services import unfollow_user
 
 
 class UnfollowUserAPI(MethodView):

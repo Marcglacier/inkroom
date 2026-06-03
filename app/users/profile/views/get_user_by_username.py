@@ -2,7 +2,7 @@ from flask.views import MethodView
 from flask_jwt_extended import jwt_required, get_jwt_identity
 
 from app.models.user import User
-from app.users.services.profile_service import get_profile
+from app.users.profile.services.get_profile import get_profile
 
 
 class GetUserByUsernameAPI(MethodView):

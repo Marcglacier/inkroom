@@ -2,7 +2,7 @@ from flask.views import MethodView
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from flask import jsonify
 
-from app.users.services.relationship_service import get_relationship
+from app.users.social.services.relationship_service import get_relationship
 
 
 class RelationshipAPI(MethodView):

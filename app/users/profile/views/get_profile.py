@@ -1,10 +1,10 @@
-# app/users/views/get_profile.py
+# app/users/profile/views/get_profile.py
 
 from flask.views import MethodView
 from flask import jsonify
 from flask_jwt_extended import jwt_required, get_jwt_identity
 
-from app.users.services.profile_service import get_profile
+from app.users.profile.services.get_profile import get_profile
 
 
 class GetProfileAPI(MethodView):
