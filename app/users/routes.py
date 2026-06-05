@@ -13,6 +13,7 @@ from .social.views.unfollow_user import UnfollowUserAPI
 from .social.views.get_following import GetFollowingAPI
 from .profile.views.get_user_by_username import GetUserByUsernameAPI
 from .social.views.relationship_view import RelationshipAPI
+from .social.views.get_recent_followers import RecentFollowersView
 
 users_bp = Blueprint("users", __name__, url_prefix="/api/users")
 
@@ -67,4 +68,9 @@ users_bp.add_url_rule(
 users_bp.add_url_rule(
     "/<int:user_id>/relationship",
     view_func=RelationshipAPI.as_view("relationship")
+)
+
+users_bp.add_url_rule(
+    "/followers/recent",
+    view_func=RecentFollowersView.as_view("recent_followers")
 )

@@ -1,16 +1,9 @@
+# app/users/social/services/relationship_service.py
 from app.models.follow import Follow
 from app.models.follow_request import FollowRequest
 
 
 def get_relationship(viewer_id, target_id):
-
-    if viewer_id == target_id:
-        return {
-            "state": "self",
-            "is_mutual": False,
-            "following": False,
-            "requested": False
-        }
 
     follow = Follow.query.filter_by(
         follower_id=viewer_id,
@@ -29,16 +22,20 @@ def get_relationship(viewer_id, target_id):
         target_id=target_id
     ).first()
 
+
     following = follow is not None
     followed_back = reverse_follow is not None
 
-    return {
+    result = {
         "state": _compute_state(following, followed_back, request),
         "is_mutual": following and followed_back,
         "following": following,
+        "followed_back": followed_back,
         "requested": request is not None
     }
 
+
+    return result
 
 def _compute_state(following, followed_back, request):
 

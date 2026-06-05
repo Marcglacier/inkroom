@@ -1,3 +1,4 @@
+# app/users/social/views/relationship_view.py
 from flask.views import MethodView
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from flask import jsonify
@@ -18,3 +19,5 @@ class RelationshipAPI(MethodView):
         )
 
         return jsonify(result), 200
+    
+    
