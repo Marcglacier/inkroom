@@ -1,4 +1,5 @@
 # app/users/social/services/relationship_service.py
+
 from app.models.follow import Follow
 from app.models.follow_request import FollowRequest
 
@@ -22,22 +23,40 @@ def get_relationship(viewer_id, target_id):
         target_id=target_id
     ).first()
 
-
     following = follow is not None
     followed_back = reverse_follow is not None
+    requested = request is not None
 
-    result = {
-        "state": _compute_state(following, followed_back, request),
-        "is_mutual": following and followed_back,
+    state = _compute_state(
+        following,
+        followed_back,
+        requested
+    )
+
+    return {
+        "state": state,
+
+        # frontend helpers
         "following": following,
         "followed_back": followed_back,
-        "requested": request is not None
+        "requested": requested,
+
+        # mutual follow
+        "is_mutual": following and followed_back,
+
+        # button action
+        "action": _compute_action(
+            following,
+            requested
+        )
     }
 
 
-    return result
-
-def _compute_state(following, followed_back, request):
+def _compute_state(
+    following: bool,
+    followed_back: bool,
+    requested: bool
+):
 
     if following and followed_back:
         return "mutual"
@@ -45,7 +64,22 @@ def _compute_state(following, followed_back, request):
     if following:
         return "following"
 
-    if request:
+    if requested:
         return "requested"
 
     return "none"
+
+
+def _compute_action(
+    following: bool,
+    requested: bool
+):
+
+    # clicking button should unfollow/cancel request
+    if following:
+        return "unfollow"
+
+    if requested:
+        return "cancel_request"
+
+    return "follow"

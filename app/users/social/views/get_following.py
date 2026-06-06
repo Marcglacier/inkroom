@@ -3,24 +3,12 @@ from flask import jsonify
 from flask_jwt_extended import jwt_required, get_jwt_identity
 
 from app.users.social.services.get_following import get_following
+from app.users.social.services.relationship_service import get_relationship
 
-from app.models.follow import Follow
 from app.models.profile import Profile
 
 
 class GetFollowingAPI(MethodView):
-
-    def _get_follow_state(self, current_user_id, target_user_id):
-
-        follow = Follow.query.filter_by(
-            follower_id=current_user_id,
-            following_id=target_user_id
-        ).first()
-
-        if not follow:
-            return "none"
-
-        return follow.status or "none"
 
     @jwt_required()
     def get(self, user_id):
@@ -43,10 +31,13 @@ class GetFollowingAPI(MethodView):
                     else None
                 ),
 
-                "follow_state": self._get_follow_state(
-                    current_user_id,
-                    u.id
-                )
+                **{
+                    "is_following": relationship["following"],
+                    "is_followed_by": relationship["followed_back"],
+                    "relationship": relationship["state"],
+                    "is_mutual": relationship["is_mutual"],
+                }
             }
             for u in following
+            for relationship in [get_relationship(current_user_id, u.id)]
         ])

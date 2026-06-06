@@ -1,7 +1,7 @@
 from datetime import datetime, timedelta
-
 from app.models.follow import Follow
 from app.models.user import User
+from app.models.profile import Profile
 
 
 def get_recent_followers(user_id, days=14):
@@ -22,17 +22,25 @@ def get_recent_followers(user_id, days=14):
 
     for follow in follows:
 
-        user = User.query.get(follow.follower_id)
-
-        if not user:
+        follower_user = User.query.get(follow.follower_id)
+        if not follower_user:
             continue
 
+        profile = Profile.query.filter_by(user_id=follower_user.id).first()
+
+        # 🔥 FIX: check if current user follows them back
+        is_following_back = Follow.query.filter_by(
+            follower_id=user_id,
+            following_id=follower_user.id
+        ).first() is not None
+
         result.append({
-            "id": user.id,
-            "username": user.username,
-            "name": user.name,
-            "avatar": user.profile_picture,
-            "followed_at": follow.created_at.isoformat()
+            "id": follower_user.id,
+            "username": follower_user.username,
+            "name": follower_user.name,
+            "avatar": profile.avatar_url if profile else None,
+            "followed_at": follow.created_at.isoformat(),
+            "is_following_back": is_following_back
         })
 
     return result

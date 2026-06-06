@@ -6,17 +6,11 @@ from app.users.services.helpers import response
 
 def unfollow_user(user_id, target_id):
 
-    # =========================
-    # REMOVE FOLLOW RELATIONSHIP
-    # =========================
-    Follow.query.filter_by(
+    deleted = Follow.query.filter_by(
         follower_id=user_id,
         following_id=target_id
     ).delete(synchronize_session=False)
 
-    # =========================
-    # CLEAN UP FOLLOW REQUESTS (BOTH DIRECTIONS)
-    # =========================
     FollowRequest.query.filter(
         (
             (FollowRequest.requester_id == user_id) &
@@ -29,14 +23,9 @@ def unfollow_user(user_id, target_id):
         )
     ).delete(synchronize_session=False)
 
-    # =========================
-    # COMMIT ALL CHANGES
-    # =========================
     db.session.commit()
 
-    return response(
-        "User unfollowed",
-        "unfollowed",
-        follower_id=user_id,
-        following_id=target_id
-    )
+    return {
+        "message": "User unfollowed",
+        "deleted": deleted
+    }

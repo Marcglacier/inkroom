@@ -1,4 +1,5 @@
-# app/users/views/follow_user.py
+# app/users/social/views/follow_user.py
+
 from flask.views import MethodView
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from flask import jsonify
@@ -11,30 +12,29 @@ class FollowUserAPI(MethodView):
     @jwt_required()
     def post(self, user_id):
 
-        current_user_id = int(get_jwt_identity())
+        viewer_id = int(get_jwt_identity())
 
         result = follow_user(
-            current_user_id,
+            viewer_id,
             user_id
         )
 
-        # =========================
-        # ERROR HANDLING (SERVICE RETURNS TUPLES)
-        # =========================
+        # service returned (payload, status_code)
         if isinstance(result, tuple):
-            data, code = result
-            return jsonify(data), code
+            payload, status_code = result
+            return jsonify(payload), status_code
 
-        # =========================
-        # RESPONSE STATUS LOGIC
-        # =========================
         status = result.get("status")
 
         if status == "requested":
-            return jsonify(result), 202   # accepted for processing
+            return jsonify(result), 202
 
         if status == "following":
-            return jsonify(result), 201   # created relationship
+            return jsonify(result), 201
+
+        # NEW: toggle unfollow response
+        if status == "unfollowed":
+            return jsonify(result), 200
 
         if "error" in result:
             return jsonify(result), 400

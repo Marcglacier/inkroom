@@ -1,6 +1,5 @@
-# app/notifications/services/readers/get_notifications.py
-
 from app.models.notification import Notification
+from app.models.profile import Profile
 
 
 def get_notifications(user_id):
@@ -16,6 +15,13 @@ def get_notifications(user_id):
 
     for n in notifications:
 
+        profile = None
+
+        if n.actor:
+            profile = Profile.query.filter_by(
+                user_id=n.actor.id
+            ).first()
+
         result.append({
             "id": n.id,
             "type": n.type,
@@ -25,8 +31,9 @@ def get_notifications(user_id):
             "actor": {
                 "id": n.actor.id if n.actor else None,
                 "username": n.actor.username if n.actor else None,
-                "avatar": getattr(n.actor, "profile_picture", None),
-            } if hasattr(n, "actor") else None,
+                "name": n.actor.name if n.actor else None,
+                "avatar": profile.avatar_url if profile else None,
+            } if n.actor else None,
 
             "extra": {
                 "post_id": getattr(n, "post_id", None),

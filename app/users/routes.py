@@ -9,7 +9,7 @@ from .social.views.follow_requests import FollowRequestsAPI
 from .social.views.accept_follow import AcceptFollowAPI
 from .social.views.reject_follow import RejectFollowAPI
 from .social.views.upload_avatar import UploadAvatarAPI
-from .social.views.unfollow_user import UnfollowUserAPI
+
 from .social.views.get_following import GetFollowingAPI
 from .profile.views.get_user_by_username import GetUserByUsernameAPI
 from .social.views.relationship_view import RelationshipAPI
@@ -22,8 +22,6 @@ users_bp = Blueprint("users", __name__, url_prefix="/api/users")
 # =====================
 users_bp.add_url_rule("/<int:user_id>/follow",
     view_func=FollowUserAPI.as_view("follow_user"), methods=["POST"])
-users_bp.add_url_rule("/<int:user_id>/follow",
-    view_func=UnfollowUserAPI.as_view("unfollow_user"), methods=["DELETE"])
 
 # =====================
 # FOLLOW REQUESTS

@@ -12,30 +12,42 @@ class GetUserByUsernameAPI(MethodView):
 
         print("\n============================")
         print("🔥 GetUserByUsernameAPI HIT")
-        print("🔥 USERNAME:", username)
+        print("🔥 RAW USERNAME:", username)
 
-        # AUTH USER
         viewer_id = int(get_jwt_identity())
         print("🔥 VIEWER ID:", viewer_id)
 
-        # TARGET USER
-        user = User.query.filter_by(username=username).first()
+        # normalize input
+        raw = username.strip()
+        safe = raw.lower()
+
+        print("🧼 CLEAN INPUT:", safe)
+
+        # 1️⃣ Try exact username match (FAST PATH)
+        user = User.query.filter(
+            User.username.ilike(raw)
+        ).first()
+
+        # 2️⃣ fallback: match by name (display name)
+        if not user:
+            print("⚠️ username not found, trying name fallback...")
+
+            user = User.query.filter(
+                User.name.ilike(raw)
+            ).first()
 
         if not user:
             print("❌ USER NOT FOUND")
-            return {
-                "message": "User not found"
-            }, 404
+            print("🔎 SEARCHED VALUE:", raw)
+            return {"message": "User not found"}, 404
 
-        print("✅ TARGET USER:", user.username)
-        print("✅ TARGET USER ID:", user.id)
+        print("✅ FOUND USER:", user.username)
+        print("✅ DISPLAY NAME:", user.name)
+        print("✅ USER ID:", user.id)
 
-        # USE MAIN PROFILE SERVICE
         profile_data = get_profile(viewer_id, user.id)
 
-        print("📦 FINAL PROFILE RESPONSE:")
-        print(profile_data)
-
+        print("📦 FINAL PROFILE RESPONSE READY")
         print("============================\n")
 
         return profile_data
