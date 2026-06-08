@@ -1,7 +1,9 @@
-# app/notifications/services/create_notification.py
+# app/notifications/services/writers/create_notification.py
 
-from app.extensions import db
+from app.extensions import db, socketio
 from app.models.notification import Notification
+
+from app.notifications.services.socket_events import emit_notification
 
 # notification types that should NOT duplicate
 DEDUPE_TYPES = {
@@ -16,9 +18,6 @@ def create_notification(**kwargs):
 
     notif_type = kwargs.get("type")
 
-    # =====================================
-    # 🔥 DEBUG: ENTRY POINT
-    # =====================================
     print("\n🔥 [NOTIF DEBUG] create_notification CALLED")
     print("➡️ type:", notif_type)
     print("➡️ user_id (receiver):", kwargs.get("user_id"))
@@ -31,7 +30,7 @@ def create_notification(**kwargs):
     # =====================================
     if notif_type in DEDUPE_TYPES:
 
-        print("⚠️ [NOTIF DEBUG] Dedup/grouping enabled for:", notif_type)
+        print("⚠️ Dedup enabled for:", notif_type)
 
         existing = Notification.query.filter_by(
             user_id=kwargs.get("user_id"),
@@ -46,37 +45,40 @@ def create_notification(**kwargs):
         # =====================================
         if existing:
 
-            print("⚠️ [NOTIF DEBUG] EXISTING GROUP FOUND")
-            print("➡️ Existing ID:", existing.id)
+            print("⚠️ EXISTING GROUP FOUND:", existing.id)
 
             actors = []
 
-            # safe read of existing grouping data
-            if hasattr(existing, "extra") and existing.extra and isinstance(existing.extra, dict):
+            if isinstance(existing.extra, dict):
                 actors = existing.extra.get("actors", [])
-
-            print("➡️ Previous actors:", actors)
 
             new_actor = kwargs.get("actor_id")
 
             if new_actor not in actors:
                 actors.append(new_actor)
-                print("🟡 [NOTIF DEBUG] Added new actor:", new_actor)
-            else:
-                print("ℹ️ [NOTIF DEBUG] Actor already in group")
 
             existing.extra = existing.extra or {}
             existing.extra["actors"] = actors
 
             db.session.commit()
 
-            print("✅ [NOTIF DEBUG] Updated grouped notification:", existing.id)
+            print("✅ Updated grouped notification:", existing.id)
+
+            # 🔥 REAL-TIME EMIT (GROUP UPDATE)
+            emit_notification(kwargs.get("user_id"), {
+                "type": notif_type,
+                "notification_id": existing.id,
+                "message": "Notification updated",
+                "actors": actors,
+                "is_update": True
+            })
+
             return existing
 
     # =====================================
     # CREATE NEW NOTIFICATION
     # =====================================
-    print("🟢 [NOTIF DEBUG] Creating new notification...")
+    print("🟢 Creating new notification...")
 
     notif = Notification(**kwargs)
 
@@ -87,7 +89,15 @@ def create_notification(**kwargs):
     db.session.add(notif)
     db.session.commit()
 
-    print("✅ [NOTIF DEBUG] Saved notification ID:", notif.id)
-    print("➡️ Initial actors:", notif.extra["actors"])
+    print("✅ Saved notification ID:", notif.id)
+
+    # 🔥 REAL-TIME EMIT (NEW NOTIFICATION)
+    emit_notification(kwargs.get("user_id"), {
+        "type": notif.type,
+        "notification_id": notif.id,
+        "message": "New notification",
+        "actors": notif.extra["actors"],
+        "is_update": False
+    })
 
     return notif

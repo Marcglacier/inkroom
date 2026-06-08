@@ -2,27 +2,32 @@ from flask import Flask, send_from_directory
 import os
 
 from .config import Config
-from .extensions import db, migrate, jwt, socketio, oauth
+from .extensions import db, migrate, jwt, socketio, oauth, mail
+
 from .auth.routes import auth_bp
 from .blog.routes import blog_bp
 from .comments.routes import comment_bp
 from app.users import users_bp
 from app.inbox.routes import create_inbox_blueprint
-from app.inbox.sockets import register_socket_events
+
 from app.notifications.routes import notifications_bp
 from app.feed.routes import feed_bp
 from app.search.routes import search_bp
 
-import app.realtime
-from .models import *
 from flask_cors import CORS
-from .extensions import mail
+
+# ✅ ONLY IMPORT SOCKET REGISTRY (NOT INDIVIDUAL MODULES)
+from app.sockets import register_socket_events
+
 
 def create_app():
-    # 👇 tell Flask where static files live
-    app = Flask(__name__, static_folder=os.path.join(os.path.dirname(__file__), "static"))
+    app = Flask(
+        __name__,
+        static_folder=os.path.join(os.path.dirname(__file__), "static")
+    )
+
     app.config.from_object(Config)
-    
+
     # =========================
     # CORS
     # =========================
@@ -33,7 +38,7 @@ def create_app():
         allow_headers=["Content-Type", "Authorization"],
         methods=["GET", "POST", "PATCH", "OPTIONS"]
     )
-        
+
     # =========================
     # EXTENSIONS
     # =========================
@@ -41,11 +46,19 @@ def create_app():
     migrate.init_app(app, db)
     jwt.init_app(app)
     mail.init_app(app)
-    socketio.init_app(app)
+
+    socketio.init_app(
+        app,
+        cors_allowed_origins="*",
+        async_mode="threading",
+        logger=True,
+        engineio_logger=True
+    )
+
     oauth.init_app(app)
 
     # =========================
-    # GOOGLE OAUTH
+    # OAUTH
     # =========================
     oauth.register(
         name="google",
@@ -56,7 +69,7 @@ def create_app():
     )
 
     # =========================
-    # SOCKET EVENTS
+    # SOCKET EVENTS (CENTRALIZED)
     # =========================
     register_socket_events(socketio)
 
@@ -84,8 +97,7 @@ def create_app():
             os.path.join("storage", "messages"),
             filename
         )
-    
-    # 👇 uploads served from static/uploads
+
     @app.route("/static/uploads/<path:filename>")
     def serve_upload(filename):
         upload_dir = os.path.join(app.static_folder, "uploads")

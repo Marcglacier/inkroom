@@ -4,6 +4,9 @@ from app.models.profile import Profile
 
 def get_notifications(user_id):
 
+    print("🔥 [NOTIF SERVICE] get_notifications CALLED")
+    print("➡️ user_id:", user_id)
+
     notifications = (
         Notification.query
         .filter_by(user_id=user_id)
@@ -11,9 +14,13 @@ def get_notifications(user_id):
         .all()
     )
 
+    print(f"📦 RAW DB COUNT: {len(notifications)}")
+
     result = []
 
     for n in notifications:
+
+        print("🔔 Processing notification ID:", n.id, "type:", n.type)
 
         profile = None
 
@@ -22,7 +29,7 @@ def get_notifications(user_id):
                 user_id=n.actor.id
             ).first()
 
-        result.append({
+        item = {
             "id": n.id,
             "type": n.type,
             "is_read": n.is_read,
@@ -39,6 +46,12 @@ def get_notifications(user_id):
                 "post_id": getattr(n, "post_id", None),
                 "comment_id": getattr(n, "comment_id", None),
             }
-        })
+        }
+
+        print("📤 SERIALIZED ITEM:", item)
+
+        result.append(item)
+
+    print("✅ FINAL RESULT SENT:", result)
 
     return result
