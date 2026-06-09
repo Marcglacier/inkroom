@@ -18,7 +18,7 @@ from flask_cors import CORS
 
 # ✅ ONLY IMPORT SOCKET REGISTRY (NOT INDIVIDUAL MODULES)
 from app.sockets import register_socket_events
-
+from flask import request, make_response
 
 def create_app():
     app = Flask(
@@ -36,8 +36,13 @@ def create_app():
         resources={r"/api/*": {"origins": "http://localhost:5173"}},
         supports_credentials=True,
         allow_headers=["Content-Type", "Authorization"],
-        methods=["GET", "POST", "PATCH", "OPTIONS"]
+        methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"]
     )
+
+    @app.before_request
+    def handle_preflight():
+      if request.method == "OPTIONS":
+          return make_response("", 200)
 
     # =========================
     # EXTENSIONS
