@@ -8,12 +8,7 @@ from app.notifications.services import (
     create_follow_notification,
     create_follow_request_notification
 )
-
-DEBUG = False
-
-def log(*args):
-    if DEBUG:
-        print("[FOLLOW]", *args)
+from app.sockets.follow import emit_relationship_update
 
 
 def follow_user(user_id, target_id):
@@ -35,23 +30,18 @@ def follow_user(user_id, target_id):
         following_id=target_id
     ).first()
 
-    # =========================
-    # UNFOLLOW (TOGGLE OFF)
-    # =========================
+    # UNFOLLOW
     if follow:
         db.session.delete(follow)
         db.session.commit()
 
-        return response(
-            "Unfollowed user",
-            "none",
-            follower_id=user_id,
-            following_id=target_id
-        )
+        emit_relationship_update(user_id, target_id)
 
-    # =========================
-    # PRIVATE → REQUEST FLOW
-    # =========================
+        return response("Unfollowed user", "none",
+                        follower_id=user_id,
+                        following_id=target_id)
+
+    # PRIVATE
     if is_private:
         req = FollowRequest.query.filter_by(
             requester_id=user_id,
@@ -62,12 +52,11 @@ def follow_user(user_id, target_id):
             db.session.delete(req)
             db.session.commit()
 
-            return response(
-                "Follow request canceled",
-                "none",
-                follower_id=user_id,
-                following_id=target_id
-            )
+            emit_relationship_update(user_id, target_id)
+
+            return response("Follow request canceled", "none",
+                            follower_id=user_id,
+                            following_id=target_id)
 
         db.session.add(FollowRequest(
             requester_id=user_id,
@@ -80,16 +69,13 @@ def follow_user(user_id, target_id):
             target_user_id=target_id
         )
 
-        return response(
-            "Follow request sent",
-            "requested",
-            follower_id=user_id,
-            following_id=target_id
-        )
+        emit_relationship_update(user_id, target_id)
 
-    # =========================
-    # PUBLIC → DIRECT FOLLOW
-    # =========================
+        return response("Follow request sent", "requested",
+                        follower_id=user_id,
+                        following_id=target_id)
+
+    # PUBLIC FOLLOW
     db.session.add(Follow(
         follower_id=user_id,
         following_id=target_id,
@@ -102,9 +88,8 @@ def follow_user(user_id, target_id):
         target_user_id=target_id
     )
 
-    return response(
-        "User followed",
-        "following",
-        follower_id=user_id,
-        following_id=target_id
-    )
+    emit_relationship_update(user_id, target_id)
+
+    return response("User followed", "following",
+                    follower_id=user_id,
+                    following_id=target_id)

@@ -36,6 +36,10 @@ class GetFollowingAPI(MethodView):
                     "is_followed_by": relationship["followed_back"],
                     "relationship": relationship["state"],
                     "is_mutual": relationship["is_mutual"],
+
+                    # 🔥 NEW
+                    "has_sent_request": relationship["has_sent_request"],
+                    "has_received_request": relationship["has_received_request"],
                 }
             }
             for u in following

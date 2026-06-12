@@ -1,4 +1,4 @@
-from flask_socketio import join_room, disconnect
+from flask_socketio import join_room, leave_room
 from flask_jwt_extended import decode_token
 from flask import request
 
@@ -8,6 +8,9 @@ from app.models.user import User
 
 def register_connection_events(socketio):
 
+    # =========================
+    # CONNECT
+    # =========================
     @socketio.on("connect")
     def handle_connect(auth):
 
@@ -17,47 +20,61 @@ def register_connection_events(socketio):
             token = auth.get("token")
 
         if not token:
-            print("❌ Socket rejected: missing token")
+            print("❌ SOCKET REJECTED: missing token")
             return False
 
         try:
             decoded = decode_token(token)
             user_id = int(decoded["sub"])
 
-            join_room(f"user_{user_id}")
+            user_room = f"user_{user_id}"
+
+            join_room(user_room)
+            join_room("global_feed")
 
             user = User.query.get(user_id)
             if user:
                 user.online = True
                 db.session.commit()
 
-            print(f"✅ CONNECTED: user {user_id}")
+            print("\n")
+            print("🟢 SOCKET CONNECTED")
+            print("sid:", request.sid)
+            print("user_id:", user_id)
+            print("joined room:", user_room)
+            print("joined room: global_feed")
+            print("\n")
+
+            socketio.emit(
+                "presence:update",
+                {
+                    "userId": user_id,
+                    "online": True
+                },
+                room=user_room
+            )
 
             return True
 
         except Exception as e:
-            print("❌ Socket auth failed:", e)
+            print("❌ SOCKET AUTH FAILED")
+            print(e)
             return False
 
-
+    # =========================
+    # DISCONNECT
+    # =========================
     @socketio.on("disconnect")
     def handle_disconnect():
 
-        token = request.args.get("token")
+        print("\n")
+        print("👋 SOCKET DISCONNECTED")
+        print("sid:", request.sid)
+        print("\n")
 
-        if not token:
-            return
+        # optional:
+        # don't try decoding token here
+        # Socket.IO disconnect events don't reliably
+        # have access to the original auth payload
 
-        try:
-            decoded = decode_token(token)
-            user_id = int(decoded["sub"])
-
-            user = User.query.get(user_id)
-            if user:
-                user.online = False
-                db.session.commit()
-
-            print(f"👋 DISCONNECTED: user {user_id}")
-
-        except Exception as e:
-            print("disconnect error:", e)
+        return

@@ -52,14 +52,7 @@ def create_app():
     jwt.init_app(app)
     mail.init_app(app)
 
-    socketio.init_app(
-        app,
-        cors_allowed_origins="*",
-        async_mode="threading",
-        logger=True,
-        engineio_logger=True
-    )
-
+    socketio.init_app(app)
     oauth.init_app(app)
 
     # =========================

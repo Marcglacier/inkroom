@@ -1,9 +1,7 @@
-# app/users/services/reject_follow.py
 from app.extensions import db
-
 from app.models.follow_request import FollowRequest
-
 from app.users.services.helpers import response
+from app.sockets.follow import emit_relationship_update
 
 
 def reject_follow(user_id, requester_id):
@@ -14,13 +12,12 @@ def reject_follow(user_id, requester_id):
     ).first()
 
     if not request:
-        return {
-            "error": "Request not found"
-        }, 404
+        return {"error": "Request not found"}, 404
 
     db.session.delete(request)
-
     db.session.commit()
+
+    emit_relationship_update(user_id, requester_id)
 
     return response(
         "Follow request rejected",
