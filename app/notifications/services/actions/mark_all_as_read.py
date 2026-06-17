@@ -1,4 +1,4 @@
-# app/notifications/services/mark_all_as_read.py
+# app/notifications/services/actions/mark_all_as_read.py
 from app.extensions import db
 from app.models.notification import Notification
 

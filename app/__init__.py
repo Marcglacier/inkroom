@@ -2,39 +2,47 @@ from flask import Flask, send_from_directory
 import os
 
 from .config import Config
-from .extensions import db, migrate, jwt, socketio, oauth
+from .extensions import db, migrate, jwt, socketio, oauth, mail
 
 from .auth.routes import auth_bp
 from .blog.routes import blog_bp
 from .comments.routes import comment_bp
 from app.users import users_bp
-
 from app.inbox.routes import create_inbox_blueprint
-from app.inbox.sockets import register_socket_events
 
 from app.notifications.routes import notifications_bp
 from app.feed.routes import feed_bp
 from app.search.routes import search_bp
 
-import app.realtime
-from .models import *
-
 from flask_cors import CORS
-from .extensions import mail
 
+# ✅ ONLY IMPORT SOCKET REGISTRY (NOT INDIVIDUAL MODULES)
+from app.sockets import register_socket_events
+from flask import request, make_response
 
 def create_app():
-    app = Flask(__name__)
+    app = Flask(
+        __name__,
+        static_folder=os.path.join(os.path.dirname(__file__), "static")
+    )
+
     app.config.from_object(Config)
-    
+
     # =========================
     # CORS
     # =========================
     CORS(
         app,
-        origins=["http://localhost:5173"],
-        supports_credentials=True
+        resources={r"/api/*": {"origins": "http://localhost:5173"}},
+        supports_credentials=True,
+        allow_headers=["Content-Type", "Authorization"],
+        methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"]
     )
+
+    @app.before_request
+    def handle_preflight():
+      if request.method == "OPTIONS":
+          return make_response("", 200)
 
     # =========================
     # EXTENSIONS
@@ -43,21 +51,23 @@ def create_app():
     migrate.init_app(app, db)
     jwt.init_app(app)
     mail.init_app(app)
+
     socketio.init_app(app)
     oauth.init_app(app)
 
-   # =========================
-   # GOOGLE OAUTH (FIXED PROPERLY)
-   # =========================
-    oauth.register(
-    name="google",
-    client_id=app.config["GOOGLE_CLIENT_ID"],
-    client_secret=app.config["GOOGLE_CLIENT_SECRET"],
-    server_metadata_url="https://accounts.google.com/.well-known/openid-configuration",
-    client_kwargs={"scope": "openid email profile"},
-    )
     # =========================
-    # SOCKET EVENTS
+    # OAUTH
+    # =========================
+    oauth.register(
+        name="google",
+        client_id=app.config["GOOGLE_CLIENT_ID"],
+        client_secret=app.config["GOOGLE_CLIENT_SECRET"],
+        server_metadata_url="https://accounts.google.com/.well-known/openid-configuration",
+        client_kwargs={"scope": "openid email profile"},
+    )
+
+    # =========================
+    # SOCKET EVENTS (CENTRALIZED)
     # =========================
     register_socket_events(socketio)
 
@@ -77,7 +87,7 @@ def create_app():
     app.register_blueprint(search_bp, url_prefix="/api/search")
 
     # =========================
-    # MEDIA
+    # MEDIA ROUTES
     # =========================
     @app.route("/media/messages/<path:filename>")
     def serve_message_media(filename):
@@ -85,5 +95,10 @@ def create_app():
             os.path.join("storage", "messages"),
             filename
         )
+
+    @app.route("/static/uploads/<path:filename>")
+    def serve_upload(filename):
+        upload_dir = os.path.join(app.static_folder, "uploads")
+        return send_from_directory(upload_dir, filename)
 
     return app

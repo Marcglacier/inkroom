@@ -8,11 +8,9 @@ class Comment(db.Model):
     __tablename__ = "comments"
 
     id = db.Column(db.Integer, primary_key=True)
-
     content = db.Column(db.Text, nullable=False)
 
     user_id = db.Column(db.Integer, db.ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
-
     post_id = db.Column(db.Integer, db.ForeignKey("posts.id", ondelete="CASCADE"), nullable=False)
 
     parent_id = db.Column(db.Integer, db.ForeignKey("comments.id"), nullable=True)
@@ -24,6 +22,12 @@ class Comment(db.Model):
         "User",
         backref=db.backref("comments", lazy=True),
         lazy=True
+    )
+
+    post = db.relationship(
+    "Post",
+    back_populates="comments",
+    lazy=True
     )
 
     parent = db.relationship(

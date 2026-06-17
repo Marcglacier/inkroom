@@ -1,15 +1,11 @@
-# app/notifications/services/readers/get_notifications.py
-
 from app.models.notification import Notification
-from app.notifications.services.core.group_notifications import group_notifications
-from app.notifications.services.core.notification_messages import build_notification_message
-import inspect
-
-# 🔥 DEBUG: confirm which function is loaded
-print("🔥 USING:", inspect.getsource(build_notification_message))
+from app.models.profile import Profile
 
 
 def get_notifications(user_id):
+
+    print("🔥 [NOTIF SERVICE] get_notifications CALLED")
+    print("➡️ user_id:", user_id)
 
     notifications = (
         Notification.query
@@ -18,30 +14,44 @@ def get_notifications(user_id):
         .all()
     )
 
-    grouped = group_notifications(notifications)
+    print(f"📦 RAW DB COUNT: {len(notifications)}")
 
     result = []
 
-    for group in grouped:
+    for n in notifications:
 
-        # 🧠 DEBUG: ensure structure is correct
+        print("🔔 Processing notification ID:", n.id, "type:", n.type)
 
+        profile = None
 
-        # 🔥 SAFETY CHECK (prevents future silent crashes)
-        if "type" not in group or "actors" not in group:
-            print("❌ INVALID GROUP FORMAT:", group)
-            continue
+        if n.actor:
+            profile = Profile.query.filter_by(
+                user_id=n.actor.id
+            ).first()
 
-        message = build_notification_message(group)
+        item = {
+            "id": n.id,
+            "type": n.type,
+            "is_read": n.is_read,
+            "created_at": n.created_at,
 
-        result.append({
-            "type": group["type"],
-            "message": message,
-            "count": len(group["raw_notifications"]),
-            "post_id": group["post_id"],
-            "comment_id": group["comment_id"],
-            "actors": group["actors"],
-            "latest_created_at": group["latest_created_at"]
-        })
+            "actor": {
+                "id": n.actor.id if n.actor else None,
+                "username": n.actor.username if n.actor else None,
+                "name": n.actor.name if n.actor else None,
+                "avatar": profile.avatar_url if profile else None,
+            } if n.actor else None,
+
+            "extra": {
+                "post_id": getattr(n, "post_id", None),
+                "comment_id": getattr(n, "comment_id", None),
+            }
+        }
+
+        print("📤 SERIALIZED ITEM:", item)
+
+        result.append(item)
+
+    print("✅ FINAL RESULT SENT:", result)
 
     return result

@@ -1,8 +1,8 @@
 # app/users/services/helpers.py
-def response(message, status, **extra):
+def response(message, state, **extra):
 
     return {
         "message": message,
-        "status": status,
+        "state": state,
         **extra
     }
