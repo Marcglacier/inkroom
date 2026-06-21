@@ -4,9 +4,10 @@ from flask import request, jsonify
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from werkzeug.utils import secure_filename
 
-from app.extensions import db
+from app.extensions import db, socketio
 from app.inbox.models.message import Message
 from app.inbox.models.conversation import Conversation
+from app.inbox.serializers.message_serializer import MessageSerializer
 
 UPLOAD_FOLDER = "media/messages"
 
@@ -26,6 +27,7 @@ class SendMessageAPI(MethodView):
 
         content = data.get("content")
         reply_to_message_id = data.get("reply_to_message_id")
+        
 
         # -----------------------------
         # FORM SUPPORT (for media)
@@ -63,5 +65,34 @@ class SendMessageAPI(MethodView):
 
         db.session.add(message)
         db.session.commit()
+
+
+        payload = MessageSerializer(
+            message
+        ).to_dict()
+
+
+        print(
+            "🔥 EMITTING MESSAGE:",
+            payload
+        )
+
+
+        print(
+            "🔥 TARGET ROOM:",
+            f"conversation_{conversation.id}"
+        )
+
+
+        socketio.emit(
+            "message:new",
+            payload,
+            room=f"conversation_{conversation.id}"
+        )
+
+
+        print(
+            "🔥 EMIT COMPLETE"
+        )
 
         return jsonify(message.to_dict()), 201

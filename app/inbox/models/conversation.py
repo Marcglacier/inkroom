@@ -1,5 +1,4 @@
 # app/inbox/models/conversation.py
-
 from datetime import datetime
 from app.extensions import db
 
@@ -8,41 +7,24 @@ class Conversation(db.Model):
     __tablename__ = "conversations"
 
     id = db.Column(db.Integer, primary_key=True)
-
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
-
-    # metadata
-    status = db.Column(db.String(20), default="active")
+    status = db.Column(db.String(20), default="active")   # active = normal chat, pending = request
     type = db.Column(db.String(20), default="dm")
     deleted_at = db.Column(db.DateTime, nullable=True)
-
-    # =========================
-    # RELATIONSHIPS
-    # =========================
 
     participants = db.relationship(
         "ConversationParticipant",
         backref="conversation",
         lazy="joined",
-        cascade="all, delete-orphan",
+        cascade="all, delete-orphan"
     )
-
-    # =========================
-    # CORE LOGIC
-    # =========================
 
     @staticmethod
     def get_or_create(user_a_id, user_b_id):
-        """
-        Find an existing DM conversation between two users
-        or create a new one.
-        """
-
         from sqlalchemy import func
         from app.inbox.models.conversation_participant import ConversationParticipant
 
-        # find DM conversation containing BOTH users
-        conversation = (
+        convo = (
             db.session.query(Conversation)
             .join(ConversationParticipant)
             .filter(Conversation.type == "dm")
@@ -51,28 +33,31 @@ class Conversation(db.Model):
             .having(func.count(ConversationParticipant.id) == 2)
             .first()
         )
+        if convo:
+            return convo
 
-        if conversation:
-            return conversation
+        convo = Conversation(type="dm", status="active")
+        db.session.add(convo)
+        db.session.flush()
 
-        # create new conversation
-        conversation = Conversation(type="dm")
-        db.session.add(conversation)
-        db.session.flush()  # get conversation.id
-
-        db.session.add_all(
-            [
-                ConversationParticipant(
-                    conversation_id=conversation.id,
-                    user_id=user_a_id,
-                ),
-                ConversationParticipant(
-                    conversation_id=conversation.id,
-                    user_id=user_b_id,
-                ),
-            ]
-        )
-
+        db.session.add_all([
+            ConversationParticipant(conversation_id=convo.id, user_id=user_a_id),
+            ConversationParticipant(conversation_id=convo.id, user_id=user_b_id)
+        ])
         db.session.commit()
+        return convo
 
-        return conversation
+    @staticmethod
+    def create_request(user_a_id, user_b_id):
+        from app.inbox.models.conversation_participant import ConversationParticipant
+
+        convo = Conversation(type="dm", status="pending")
+        db.session.add(convo)
+        db.session.flush()
+
+        db.session.add_all([
+            ConversationParticipant(conversation_id=convo.id, user_id=user_a_id),
+            ConversationParticipant(conversation_id=convo.id, user_id=user_b_id)
+        ])
+        db.session.commit()
+        return convo
