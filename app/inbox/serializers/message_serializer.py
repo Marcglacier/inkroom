@@ -41,9 +41,9 @@ class MessageSerializer(SerializerMixin):
             # META DATA
             # =========================
             "created_at": (
-                self.message.created_at.isoformat()
-                if self.message.created_at
-                else None
+               self.message.created_at.isoformat() + "Z"
+              if self.message.created_at
+              else None
             ),
 
             "edited": self.message.edited,

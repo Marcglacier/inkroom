@@ -11,6 +11,8 @@ class DeleteNotificationAPI(MethodView):
 
     @jwt_required()
     def delete(self, notification_id):
+        print("🔥 DELETE HIT")
+        print("🔥 USER:", get_jwt_identity())
 
         user_id = int(get_jwt_identity())
 

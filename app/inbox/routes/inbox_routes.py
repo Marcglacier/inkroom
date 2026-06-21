@@ -4,6 +4,7 @@ from app.inbox.api.inbox.inbox_list import InboxAPI
 from app.inbox.routes.message_routes import register_message_routes
 from app.inbox.routes.conversation_routes import register_conversation_routes
 
+
 inbox_bp = Blueprint("inbox", __name__)
 
 # inbox list

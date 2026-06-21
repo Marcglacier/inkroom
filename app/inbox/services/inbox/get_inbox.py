@@ -1,3 +1,4 @@
+# app/inbox/services/inbox/get_inbox.py
 from sqlalchemy import distinct
 
 from app.extensions import db
@@ -8,18 +9,18 @@ from app.inbox.models.message import Message
 from app.models.user import User
 from app.inbox.services.messages.message_reaction_aggregator import build_reactions
 
+
 def get_inbox(user_id):
 
-    print("\n========== INBOX DEBUG START ==========")
-    print(f"USER ID: {user_id}")
+    convo_ids = [
+        c[0]
+        for c in db.session.query(
+            distinct(ConversationParticipant.conversation_id)
+        ).filter(
+            ConversationParticipant.user_id == user_id
+        ).all()
+    ]
 
-    convo_ids = db.session.query(
-        distinct(ConversationParticipant.conversation_id)
-    ).filter(
-        ConversationParticipant.user_id == user_id
-    ).all()
-
-    convo_ids = [c[0] for c in convo_ids]
     results = []
 
     for convo_id in convo_ids:
@@ -36,17 +37,19 @@ def get_inbox(user_id):
             continue
 
         participant_ids = [p.user_id for p in participants]
-
-        # =========================
-        # SELF CHAT
-        # =========================
         is_self = len(participant_ids) == 1 and participant_ids[0] == user_id
 
         if is_self:
             other_user_id = user_id
             username = "Saved Messages"
+            name = "Saved Messages"
+            avatar = None
         else:
-            other = next((p for p in participants if p.user_id != user_id), None)
+            other = next(
+                (p for p in participants if p.user_id != user_id),
+                None
+            )
+
             if not other:
                 continue
 
@@ -56,10 +59,9 @@ def get_inbox(user_id):
 
             other_user_id = user.id
             username = user.username
+            name = user.name
+            avatar = user.profile_picture
 
-        # =========================
-        # CLEAR LOGIC
-        # =========================
         clear = ConversationClear.query.filter_by(
             conversation_id=convo_id,
             user_id=user_id
@@ -82,9 +84,6 @@ def get_inbox(user_id):
         if not last_msg:
             continue
 
-        # =========================
-        # UNREAD COUNT
-        # =========================
         unread_query = Message.query.filter(
             Message.conversation_id == convo_id,
             Message.sender_id != user_id,
@@ -97,39 +96,41 @@ def get_inbox(user_id):
                 Message.created_at > clear.cleared_at
             )
 
-        # =========================
-        # REPLY PREVIEW
-        # =========================
-        reply_data = None
-        if last_msg.reply_to:
-            reply_data = {
-                "id": last_msg.reply_to.id,
-                "content": last_msg.reply_to.content,
-                "sender_username": (
-                    last_msg.reply_to.sender.username
-                    if last_msg.reply_to.sender else None
-                )
-            }
-
         results.append({
             "conversation_id": convo_id,
+            "type": convo.type,
             "user_id": other_user_id,
             "username": username,
-
+            "name": name,
+            "avatar": avatar,
+            "unread": unread_query.count(),
             "last_message": {
                 "id": last_msg.id,
                 "content": last_msg.content,
                 "sender_id": last_msg.sender_id,
                 "sender_username": (
-                    last_msg.sender.username if last_msg.sender else None
+                    last_msg.sender.username
+                    if last_msg.sender else None
                 ),
                 "created_at": last_msg.created_at.isoformat(),
-                "reply_to": reply_data,
+                "reply_to": (
+                    {
+                        "id": last_msg.reply_to.id,
+                        "content": last_msg.reply_to.content,
+                        "sender_username": (
+                            last_msg.reply_to.sender.username
+                            if last_msg.reply_to.sender else None
+                        )
+                    }
+                    if last_msg.reply_to else None
+                ),
                 "reactions": build_reactions(last_msg.id)
-            },
-
-            "unread": unread_query.count()
+            }
         })
 
-    print("\n========== INBOX DEBUG END ==========\n")
+    results.sort(
+        key=lambda c: c["last_message"]["created_at"],
+        reverse=True
+    )
+
     return results

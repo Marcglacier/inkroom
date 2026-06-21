@@ -3,11 +3,17 @@
 Revision ID: b7f3f540a8dc
 Revises: d9ff3cbafe50
 Create Date: 2026-06-10 16:03:54.888139
-
 """
+
 from alembic import op
 import sqlalchemy as sa
 from datetime import timezone
+
+# --- Alembic identifiers ---
+revision = "b7f3f540a8dc"
+down_revision = "d9ff3cbafe50"
+branch_labels = None
+depends_on = None
 
 
 def upgrade():
@@ -36,19 +42,19 @@ def upgrade():
             )
 
     # 2. Then alter column type safely
-    with op.batch_alter_table('follow_requests') as batch_op:
+    with op.batch_alter_table("follow_requests") as batch_op:
         batch_op.alter_column(
-            'created_at',
+            "created_at",
             existing_type=sa.DateTime(),  # important: match current reality
             type_=sa.DateTime(timezone=True),
-            nullable=False
+            nullable=False,
         )
 
 
 def downgrade():
-    with op.batch_alter_table('follow_requests') as batch_op:
+    with op.batch_alter_table("follow_requests") as batch_op:
         batch_op.alter_column(
-            'created_at',
+            "created_at",
             type_=sa.DateTime(),
-            nullable=True
+            nullable=True,
         )

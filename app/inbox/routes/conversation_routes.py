@@ -3,7 +3,8 @@ from app.inbox.api.conversations.conversation_messages import ConversationMessag
 from app.inbox.api.conversations.clear_conversation import ClearConversationAPI
 from app.inbox.api.conversations.delete_conversation import DeleteConversationAPI
 from app.inbox.api.messages.fetch_pinned_messages import FetchPinnedMessagesAPI
-
+from app.inbox.api.conversations.start_conversation import StartConversationAPI
+from app.inbox.api.conversations.conversation_detail import ConversationDetailAPI
 
 def register_conversation_routes(bp):
 
@@ -30,3 +31,19 @@ def register_conversation_routes(bp):
         view_func=FetchPinnedMessagesAPI.as_view("fetch_pinned"),
         methods=["GET"]
     )
+
+    bp.add_url_rule(
+        "/conversations/start/<int:user_id>",
+        view_func=StartConversationAPI.as_view(
+        "start_conversation"
+        ),
+        methods=["POST"]
+    )
+
+    bp.add_url_rule(
+        "/conversations/<int:conversation_id>/detail",
+        view_func=ConversationDetailAPI.as_view(
+            "conversation_detail"
+        ),
+        methods=["GET"]
+    )    
