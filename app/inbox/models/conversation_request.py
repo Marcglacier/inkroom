@@ -26,18 +26,27 @@ class ConversationRequest(db.Model):
     conversation_id = db.Column(
         db.Integer,
         db.ForeignKey("conversations.id"),
-        nullable=True
-    )
-
-    status = db.Column(
-        db.String(20),
-        nullable=False,
-        default="pending"
+        nullable=False
     )
 
     created_at = db.Column(
         db.DateTime,
         default=datetime.utcnow
+    )
+
+    sender = db.relationship(
+        "User",
+        foreign_keys=[sender_id]
+    )
+
+    receiver = db.relationship(
+        "User",
+        foreign_keys=[receiver_id]
+    )
+
+    conversation = db.relationship(
+        "Conversation",
+        foreign_keys=[conversation_id]
     )
 
     __table_args__ = (

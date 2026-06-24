@@ -1,22 +1,37 @@
 # app/inbox/models/conversation_participant.py
+
 from app.extensions import db
 
 
 class ConversationParticipant(db.Model):
     __tablename__ = "conversation_participants"
 
-    id = db.Column(db.Integer, primary_key=True)
+    id = db.Column(
+        db.Integer,
+        primary_key=True
+    )
 
     conversation_id = db.Column(
         db.Integer,
-        db.ForeignKey("conversations.id", ondelete="CASCADE"),
+        db.ForeignKey(
+            "conversations.id",
+            ondelete="CASCADE"
+        ),
         nullable=False
     )
 
     user_id = db.Column(
         db.Integer,
-        db.ForeignKey("users.id", ondelete="CASCADE"),
+        db.ForeignKey(
+            "users.id",
+            ondelete="CASCADE"
+        ),
         nullable=False
+    )
+
+    last_read_message_id = db.Column(
+        db.Integer,
+        nullable=True
     )
 
     __table_args__ = (
