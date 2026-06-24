@@ -5,6 +5,11 @@ from app.inbox.api.conversations.delete_conversation import DeleteConversationAP
 from app.inbox.api.messages.fetch_pinned_messages import FetchPinnedMessagesAPI
 from app.inbox.api.conversations.start_conversation import StartConversationAPI
 from app.inbox.api.conversations.conversation_detail import ConversationDetailAPI
+from app.inbox.api.conversations.get_request_conversation import RequestConversationAPI
+from app.inbox.api.conversations.accept_request import AcceptRequestAPI
+from app.inbox.api.conversations.reject_request import RejectRequestAPI
+from app.inbox.api.conversations.list_requests import ListRequestsAPI
+    
 
 def register_conversation_routes(bp):
 
@@ -46,4 +51,33 @@ def register_conversation_routes(bp):
             "conversation_detail"
         ),
         methods=["GET"]
-    )    
+    )
+
+    bp.add_url_rule(
+        "/requests/<int:conversation_id>",
+        view_func=RequestConversationAPI.as_view(
+            "request_conversation"
+        )
+    )
+
+    bp.add_url_rule(
+        "/requests/<int:conversation_id>/accept",
+        view_func=AcceptRequestAPI.as_view(
+            "accept_request"
+        )
+    )
+
+    bp.add_url_rule(
+         "/requests/<int:conversation_id>/reject",
+         view_func=RejectRequestAPI.as_view(
+            "reject_request"
+         )
+    )
+
+    bp.add_url_rule(
+        "/requests",
+        view_func=ListRequestsAPI.as_view(
+        "list_requests"),
+        methods=["GET"]
+    )
+
