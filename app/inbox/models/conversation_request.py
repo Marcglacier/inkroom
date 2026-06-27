@@ -1,4 +1,5 @@
 from datetime import datetime
+
 from app.extensions import db
 
 
@@ -26,6 +27,12 @@ class ConversationRequest(db.Model):
     conversation_id = db.Column(
         db.Integer,
         db.ForeignKey("conversations.id"),
+        nullable=False
+    )
+
+    status = db.Column(
+        db.String(20),
+        default="pending",
         nullable=False
     )
 

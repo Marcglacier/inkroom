@@ -81,27 +81,47 @@ class Message(db.Model):
         passive_deletes=True
     )
 
+    pins = db.relationship(
+        "PinnedMessage",
+        backref="message",
+        lazy="select",
+        cascade="all, delete-orphan"
+    )
+
 
     # ================= SERIALIZER =================
     def to_dict(self):
         return {
-            "id": self.id,
-            "conversation_id": self.conversation_id,
-            "sender_id": self.sender_id,
-            "receiver_id": self.receiver_id,
-            "sender_username": self.sender.username if self.sender else None,
-            
-            "content": self.content,
-            "media_url": self.media_url,
-            "media_type": self.media_type,
-            "reply_to": self.reply_to_message_id,
-            "created_at": self.created_at.isoformat() if self.created_at else None,
-            "edited": self.edited,
-            "status": self.status,
-            "delivered_at": self.delivered_at,
-            "read_at": self.read_at,
-            "is_forwarded": self.is_forwarded,
-        }
+          "id": self.id,
+          "conversation_id": self.conversation_id,
+          "sender_id": self.sender_id,
+          "receiver_id": self.receiver_id,
+          "sender_username": self.sender.username if self.sender else None,
 
+          "content": self.content,
+          "media_url": self.media_url,
+          "media_type": self.media_type,
+          "reply_to": self.reply_to_message_id,
+
+          "created_at": (
+              self.created_at.isoformat() + "Z"
+              if self.created_at else None
+            ),
+
+          "edited": self.edited,
+          "status": self.status,
+
+          "delivered_at": (
+              self.delivered_at.isoformat() + "Z"
+              if self.delivered_at else None
+            ),
+
+          "read_at": (
+             self.read_at.isoformat() + "Z"
+             if self.read_at else None
+            ),
+
+          "is_forwarded": self.is_forwarded,
+        }
     def __repr__(self):
         return f"<Message {self.id} from={self.sender_id} to={self.receiver_id}>"

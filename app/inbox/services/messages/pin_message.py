@@ -1,9 +1,9 @@
 # app/inbox/services/messages/pin_message.py
 from datetime import datetime
-from app.extensions import db
+from app.extensions import db, socketio
 from app.inbox.models.pinned_message import PinnedMessage
 from app.inbox.models.message import Message
-
+from app.inbox.models.conversation import Conversation
 
 def pin_message(user_id, message_id):
 
@@ -18,6 +18,22 @@ def pin_message(user_id, message_id):
 
     if already:
         return {"error": "already pinned"}, 400
+    
+    convo = Conversation.query.get(msg.conversation_id)
+    if not convo:
+        return {"error": "Conversation not found"}, 404
+
+    if user_id not in [p.user_id for p in convo.participants]:
+        return {"error": "Forbidden"}, 403
+    
+    pin_count = PinnedMessage.query.filter_by(
+        conversation_id=msg.conversation_id
+    ).count()
+
+    if pin_count >= 5:
+       return {
+          "error": "Maximum of 5 pinned messages allowed."
+        }, 400
 
     pin = PinnedMessage(
         conversation_id=msg.conversation_id,
@@ -29,4 +45,17 @@ def pin_message(user_id, message_id):
     db.session.add(pin)
     db.session.commit()
 
-    return {"message": "pinned"}
+    payload = {
+        "message_id": msg.id,
+        "conversation_id": msg.conversation_id,
+        "is_pinned": True,
+    }
+
+    socketio.emit(
+       "message:pinned",
+       payload,
+       room=f"conversation_{msg.conversation_id}",
+    )
+
+    payload["message"] = "pinned"
+    return payload

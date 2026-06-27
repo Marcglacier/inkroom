@@ -13,31 +13,50 @@ def get_inbox(user_id):
     results = []
 
     for convo_id in convo_ids:
+        print("\n--------------------\nCHECKING CONVO:", convo_id)
         convo = Conversation.query.get(convo_id)
-        if not convo: continue
+        if not convo: print("❌ CONVO NOT FOUND"); continue
+        print("STATUS:", convo.status)
 
-        # hide pending requests from receiver
         if convo.status == "pending":
             req = ConversationRequest.query.filter_by(conversation_id=convo_id).first()
-            if req and req.receiver_id == user_id: continue
+            print("PENDING REQUEST:", req.id if req else None)
+            if req:
+                print("SENDER:", req.sender_id, "RECEIVER:", req.receiver_id, "CURRENT USER:", user_id)
+                if req.receiver_id == user_id:
+                    print("🚫 HIDING PENDING REQUEST FROM RECEIVER"); continue
+
+        if convo.status == "rejected":
+            req = ConversationRequest.query.filter_by(conversation_id=convo_id).first()
+            print("REJECTED REQUEST:", req.id if req else None)
+            if req:
+                print("SENDER:", req.sender_id, "RECEIVER:", req.receiver_id, "CURRENT USER:", user_id)
+                if req.receiver_id == user_id:
+                    print("🚫 HIDING REJECTED CONVERSATION FROM RECEIVER"); continue
 
         participants = ConversationParticipant.query.filter_by(conversation_id=convo_id).all()
-        if not participants: continue
+        print("PARTICIPANTS:", [p.user_id for p in participants])
+        if not participants: print("❌ NO PARTICIPANTS"); continue
 
         if len(participants) == 1 and participants[0].user_id == user_id:
             other_user_id, username, name, avatar = user_id, "Saved Messages", "Saved Messages", None
         else:
             other = next((p for p in participants if p.user_id != user_id), None)
-            if not other: continue
+            if not other: print("❌ OTHER USER NOT FOUND"); continue
             user = User.query.get(other.user_id)
-            if not user: continue
+            if not user: print("❌ USER RECORD NOT FOUND"); continue
             other_user_id, username, name, avatar = user.id, user.username, user.name, user.profile_picture
 
         clear = ConversationClear.query.filter_by(conversation_id=convo_id, user_id=user_id).first()
         msg_query = Message.query.filter(Message.conversation_id == convo_id, Message.deleted_for_everyone.is_(False))
-        if clear: msg_query = msg_query.filter(Message.created_at > clear.cleared_at)
+        if clear:
+            print("CLEARED AT:", clear.cleared_at)
+            msg_query = msg_query.filter(Message.created_at > clear.cleared_at)
+
         last_msg = msg_query.order_by(Message.created_at.desc()).first()
-        if not last_msg: continue
+        if not last_msg: print("❌ NO LAST MESSAGE"); continue
+        print("LAST MESSAGE:", last_msg.id, last_msg.content)
+        print("✅ ADDING TO INBOX:", convo_id, convo.status)
 
         unread_query = Message.query.filter(
             Message.conversation_id == convo_id,

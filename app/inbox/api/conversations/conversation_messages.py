@@ -5,6 +5,7 @@ from flask_jwt_extended import jwt_required, get_jwt_identity
 from app.extensions import db, socketio
 from app.inbox.models import (
     Message,
+    Conversation,
     ConversationClear,
     ConversationParticipant
 )
@@ -53,6 +54,9 @@ class ConversationMessagesAPI(MethodView):
     def get(self, conversation_id):
 
         uid = int(get_jwt_identity())
+        conversation = Conversation.query.get_or_404(
+        conversation_id)
+    
 
         page = int(
             request.args.get("page", 1)
@@ -207,6 +211,7 @@ class ConversationMessagesAPI(MethodView):
             "conversation": {
 
                 "id": conversation_id,
+                "status": conversation.status,
 
                 "user": chamber_user,
 

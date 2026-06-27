@@ -1,5 +1,5 @@
 # app/inbox/services/messages/unpin_message.py
-from app.extensions import db
+from app.extensions import db, socketio
 from app.inbox.models.pinned_message import PinnedMessage
 
 
@@ -15,4 +15,21 @@ def unpin_message(message_id):
     db.session.delete(pin)
     db.session.commit()
 
-    return {"message": "unpinned"}
+    payload = {
+       "message_id": pin.message_id,
+       "conversation_id": pin.conversation_id,
+       "is_pinned": False,
+    }
+
+    socketio.emit(
+      "message:unpinned",
+       payload,
+       room=f"conversation_{pin.conversation_id}",
+    )
+
+    return {
+        "message": "unpinned",
+        "message_id": pin.message_id,
+        "conversation_id": pin.conversation_id,
+        "is_pinned": False,
+    }
