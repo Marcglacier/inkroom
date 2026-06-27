@@ -2,9 +2,9 @@
 from flask.views import MethodView
 from flask import request, jsonify
 from flask_jwt_extended import jwt_required, get_jwt_identity
-
-from app.extensions import db
+from app.inbox.services.messages.edit_message import (edit_message,)
 from app.inbox.models.message import Message
+from datetime import datetime, timedelta
 
 
 class EditMessageAPI(MethodView):
@@ -21,18 +21,16 @@ class EditMessageAPI(MethodView):
 
         data = request.get_json() or {}
         new_content = data.get("content", "").strip()
-
+         
+        if datetime.utcnow() - message.created_at > timedelta(minutes=20):
+            return jsonify({ "error": "Editing period expired" }), 403
+        
         if not new_content:
             return jsonify({"error": "Content required"}), 400
 
-        message.content = new_content
-        message.edited = True
+        if new_content == message.content:
+            return jsonify({"error": "Nothing changed"}), 400
+        
+        payload = edit_message(message,new_content,)
 
-        db.session.commit()
-
-        return jsonify({
-            "message": "updated",
-            "id": message.id,
-            "content": message.content,
-            "edited": True
-        }), 200
+        return jsonify(payload), 200

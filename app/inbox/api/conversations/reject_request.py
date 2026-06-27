@@ -1,4 +1,5 @@
 from flask.views import MethodView
+
 from flask_jwt_extended import (
     jwt_required,
     get_jwt_identity
@@ -41,17 +42,41 @@ class RejectRequestAPI(MethodView):
             .get(conversation_id)
         )
 
+        if not conversation:
+
+            return {
+                "error": "Conversation not found"
+            }, 404
+
+        print(
+            "\n🔥 REJECTING REQUEST"
+        )
+
+        print(
+            "CONVERSATION:",
+            conversation.id
+        )
+
+        print(
+            "SENDER:",
+            request.sender_id
+        )
+
+        print(
+            "RECEIVER:",
+            request.receiver_id
+        )
+
         conversation.status = "rejected"
 
-        db.session.delete(
-            request
-        )
+        request.status = "rejected"
 
         db.session.commit()
 
+        print(
+            "✅ REQUEST MARKED REJECTED"
+        )
+
         return {
-
-            "message":
-                "Request rejected"
-
+            "message": "Request rejected"
         }, 200

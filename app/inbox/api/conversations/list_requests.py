@@ -85,28 +85,31 @@ class ListRequestsAPI(MethodView):
 
             data.append({
 
-                "conversation_id":
-                    request.conversation_id,
+    "conversation_id":
+        request.conversation_id,
 
-                "user_id":
-                    sender.id,
+    "user_id":
+        sender.id,
 
-                "name":
-                    sender.name,
+    "name":
+        sender.name,
 
-                "username":
-                    sender.username,
+    "username":
+        sender.username,
 
-                "avatar":
-                    profile.avatar_url
-                    if profile
-                    else None,
+    "avatar":
+        profile.avatar_url
+        if profile
+        else None,
 
-                "preview":
-                    last_message.content
-                    if last_message
-                    else "Sent a request"
+    "preview":
+        last_message.content
+        if last_message
+        else "Sent a request",
 
-            })
+    "status":
+        request.status
+
+})
 
         return data, 200

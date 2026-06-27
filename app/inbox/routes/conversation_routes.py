@@ -9,7 +9,7 @@ from app.inbox.api.conversations.get_request_conversation import RequestConversa
 from app.inbox.api.conversations.accept_request import AcceptRequestAPI
 from app.inbox.api.conversations.reject_request import RejectRequestAPI
 from app.inbox.api.conversations.list_requests import ListRequestsAPI
-    
+from app.inbox.api.conversations.restore_request import RestoreRequestAPI
 
 def register_conversation_routes(bp):
 
@@ -80,4 +80,11 @@ def register_conversation_routes(bp):
         "list_requests"),
         methods=["GET"]
     )
+
+    bp.add_url_rule(
+    "/requests/<int:conversation_id>/restore",
+    view_func=RestoreRequestAPI.as_view(
+        "restore_request"
+    )
+)
 
