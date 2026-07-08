@@ -9,7 +9,7 @@ from app.inbox.services.conversations.conversation_service import (
 from app.inbox.services.messages.message_status import (
     get_message_status,
 )
-
+from app.inbox.serializers.message_serializer import MessageSerializer
 
 def forward_message(sender_id, message_id, to_user_id):
 
@@ -47,7 +47,6 @@ def forward_message(sender_id, message_id, to_user_id):
     # =============================
     # CLONE MEDIA
     # =============================
-    media_urls = []
 
     original_media = MessageMedia.query.filter_by(
         message_id=original.id
@@ -57,12 +56,21 @@ def forward_message(sender_id, message_id, to_user_id):
 
         cloned = MessageMedia(
             message_id=new_msg.id,
-            file_url=media.file_url,
-            file_type=media.file_type,
+            object_key=media.object_key,
+            filename=media.filename,
+            mime_type=media.mime_type,
+            size=media.size,
+
+            # Audio metadata
+            title=media.title,
+            artist=media.artist,
+            album=media.album,
+            duration=media.duration,
+            cover_object_key=media.cover_object_key,
         )
 
         db.session.add(cloned)
-        media_urls.append(media.file_url)
+        
 
     db.session.commit()
     status, online, in_chat = get_message_status(
@@ -74,19 +82,11 @@ def forward_message(sender_id, message_id, to_user_id):
     new_msg.status = status
 
     db.session.commit()
+    db.session.refresh(new_msg)
     # =============================
     # BUILD SOCKET PAYLOAD
     # =============================
-    payload = new_msg.to_dict()
-
-    payload.update({
-        "media": media_urls,
-        "reply_to": None,
-        "forwarded_from": None,
-        "is_pinned": False,
-        "reactions": [],
-        "created_at": new_msg.created_at.isoformat() + "Z",
-    })
+    payload = MessageSerializer(new_msg).to_dict()
 
     # =============================
     # REALTIME EMIT

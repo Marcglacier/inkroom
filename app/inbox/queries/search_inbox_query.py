@@ -5,7 +5,7 @@ from app.inbox.models.message import Message
 from app.inbox.models.conversation_participant import ConversationParticipant
 from app.inbox.models.conversation_clear import ConversationClear
 from app.models.user import User
-from app.models.profile import Profile
+from app.storage.service import get_file_url
 
 
 
@@ -44,10 +44,6 @@ def search_inbox_messages(user_id, text):
 
     for user in users:
 
-        profile = Profile.query.filter_by(
-            user_id=user.id
-        ).first()
-
 
         results.append({
 
@@ -59,10 +55,8 @@ def search_inbox_messages(user_id, text):
 
             "username":user.username,
 
-            "avatar":
-                profile.avatar_url
-                if profile
-                else None
+            "avatar":(get_file_url(user.profile_picture)
+                       if user.profile_picture else None)
 
         })
 

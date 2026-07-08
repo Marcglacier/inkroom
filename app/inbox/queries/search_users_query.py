@@ -1,7 +1,7 @@
 from sqlalchemy import or_
 
 from app.models.user import User
-
+from app.storage.service import get_file_url
 
 def search_inbox_users(user_id, text):
 
@@ -29,10 +29,8 @@ def search_inbox_users(user_id, text):
             "user_id": u.id,
             "username": u.username,
             "name": u.name,
-            "avatar":
-                u.profile.avatar_url
-                if u.profile
-                else None
+            "avatar": (get_file_url(u.profile_picture)if u.profile_picture
+                       else None),    
         }
         for u in users
     ]

@@ -1,7 +1,8 @@
 # app/inbox/models/message.py
-from datetime import datetime
+from datetime import datetime, timedelta
 from sqlalchemy.dialects.postgresql import TSVECTOR
 from app.extensions import db
+
 
 
 class Message(db.Model):
@@ -30,12 +31,17 @@ class Message(db.Model):
         index=True
     )
 
-    content = db.Column(db.Text)
+    content = db.Column(db.Text, nullable=True,)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
     # ================= MEDIA =================
-    media_url = db.Column(db.String(500))
-    media_type = db.Column(db.String(50))
+    media = db.relationship(
+       "MessageMedia",
+        back_populates="message",
+        cascade="all, delete-orphan",
+        passive_deletes=True,
+        lazy="selectin",        
+    )
 
     # ================= SEARCH =================
     search_vector = db.Column(TSVECTOR)
@@ -88,6 +94,14 @@ class Message(db.Model):
         cascade="all, delete-orphan"
     )
 
+    @property
+    def can_undo_delete(self):
+        return (
+           self.deleted_for_everyone
+           and self.delete_requested_at is not None
+           and datetime.utcnow() < self.delete_requested_at + timedelta(seconds=10)
+        )
+
 
     # ================= SERIALIZER =================
     def to_dict(self):
@@ -97,10 +111,8 @@ class Message(db.Model):
           "sender_id": self.sender_id,
           "receiver_id": self.receiver_id,
           "sender_username": self.sender.username if self.sender else None,
-
           "content": self.content,
-          "media_url": self.media_url,
-          "media_type": self.media_type,
+          "media": [media.to_dict() for media in self.media],
           "reply_to": self.reply_to_message_id,
 
           "created_at": (

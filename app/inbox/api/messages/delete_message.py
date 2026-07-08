@@ -1,12 +1,9 @@
 # app/inbox/views/delete_message.py
 
-from datetime import datetime
-
 from flask.views import MethodView
 from flask import jsonify, request
 from flask_jwt_extended import jwt_required, get_jwt_identity
-
-from app.extensions import db
+from app.inbox.services.messages.delete_message import (delete_for_me, delete_for_everyone,)
 from app.inbox.models.message import Message
 
 
@@ -27,35 +24,25 @@ class DeleteMessageAPI(MethodView):
         if mode == "everyone" and message.sender_id != user_id:
             return jsonify({"error": "Only sender can delete for everyone"}), 403
 
-        if message.deleted_for_everyone:
+        if mode == "everyone" and message.deleted_for_everyone:
             return jsonify({"error": "Already deleted for everyone"}), 400
 
-        message.delete_requested_at = datetime.utcnow()
+        
 
         # =========================
-        # DELETE FOR EVERYONE
+        # DELETE
         # =========================
         if mode == "everyone":
-            message.deleted_for_everyone = True
+           delete_for_everyone(message)
 
-        # =========================
-        # DELETE FOR ME
-        # =========================
         elif mode == "me":
-            deleted_users = message.deleted_for_users or []
-
-            if user_id not in deleted_users:
-                deleted_users.append(user_id)
-
-            message.deleted_for_users = deleted_users
+           delete_for_me(message, user_id)
 
         else:
-            return jsonify({"error": "Invalid mode"}), 400
-
-        db.session.commit()
-
+         return jsonify({"error": "Invalid mode"}), 400
+        
         return jsonify({
-            "message": "Delete scheduled",
-            "message_id": message.id,
-            "mode": mode
+          "message": "Delete scheduled",
+          "message_id": message.id,
+          "mode": mode,
         })

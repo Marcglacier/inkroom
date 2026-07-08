@@ -2,7 +2,7 @@ from app.models.user import User
 from app.models.profile import Profile
 from app.extensions import db
 from app.users.profile.services.helpers import format_joined_at, safe_iso
-
+from app.storage.service import get_file_url
 
 def get_profile_base(user_id):
 
@@ -15,12 +15,17 @@ def get_profile_base(user_id):
         db.session.add(profile)
         db.session.commit()
 
+
+    avatar_url = None
+    if user.profile_picture:
+       avatar_url = get_file_url(user.profile_picture)
+
     return {
         "id": user.id,
         "username": user.username,
         "name": user.name,
         "bio": profile.bio,
-        "avatar_url": profile.avatar_url,
+        "avatar_url": avatar_url,
         "location": profile.location,
         "birthday": safe_iso(profile.birthday),
         "social_links": profile.social_links or [],

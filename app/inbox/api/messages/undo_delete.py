@@ -2,7 +2,7 @@
 from flask.views import MethodView
 from flask import jsonify
 from flask_jwt_extended import jwt_required, get_jwt_identity
-
+from app.inbox.services.messages.delete_message import undo_delete
 from datetime import datetime, timedelta
 
 from app.extensions import db
@@ -24,16 +24,7 @@ class UndoDeleteAPI(MethodView):
             return jsonify({"error": "Undo window expired"}), 400
 
         # restore
-        message.deleted_for_everyone = False
-
-        deleted_users = message.deleted_for_users or []
-        if user_id in deleted_users:
-            deleted_users.remove(user_id)
-        message.deleted_for_users = deleted_users
-
-        message.delete_requested_at = None
-
-        db.session.commit()
+        undo_delete(message, user_id)
 
         return jsonify({
             "message": "Message restored",

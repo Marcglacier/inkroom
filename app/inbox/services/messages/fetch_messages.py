@@ -3,118 +3,61 @@
 from app.inbox.models.message import Message
 from app.models.user import User
 from app.inbox.services.messages.message_reaction_aggregator import build_reactions
+from app.inbox.serializers.message_media_serializer import MessageMediaSerializer
 
 
 def fetch_messages(conversation_id, current_user_id):
+    
 
-    query = Message.query.filter_by(
-        conversation_id=conversation_id
-    ).order_by(Message.created_at.asc())
+    query = (
+        Message.query.filter_by(conversation_id=conversation_id)
+        .order_by(Message.created_at.asc())
+    )
 
     messages = []
+    message_cache, user_cache = {}, {}
 
-    # =============================
-    # CACHE (avoid repeated DB hits)
-    # =============================
-    message_cache = {}
-    user_cache = {}
+    def get_user(user_id):
+        if user_id not in user_cache:
+            user_cache[user_id] = User.query.get(user_id)
+        return user_cache[user_id]
+
+    def get_message(msg_id):
+        if msg_id not in message_cache:
+            message_cache[msg_id] = Message.query.get(msg_id)
+        return message_cache[msg_id]
+
 
     for message in query:
 
-        # -----------------------------
-        # DELETE FOR EVERYONE
-        # -----------------------------
-        if message.deleted_for_everyone:
-            continue
-
-        # -----------------------------
-        # DELETE FOR ME
-        # -----------------------------
+        # Skip deleted messages
         if current_user_id in (message.deleted_for_users or []):
             continue
 
 
-        # =============================
-        # SENDER USERNAME (CACHE)
-        # =============================
-        sender_id = message.sender_id
-
-        if sender_id in user_cache:
-            sender = user_cache[sender_id]
-        else:
-            sender = User.query.get(sender_id)
-            user_cache[sender_id] = sender
-
-        sender_username = (
-            sender.username
-            if sender
-            else None
-        )
+        sender = get_user(message.sender_id)
+        sender_username = sender.username if sender else None
 
 
-        # =============================
-        # REPLY OBJECT
-        # =============================
+        # Build reply data
         reply_data = None
 
         if message.reply_to_message_id:
-
-            if message.reply_to_message_id in message_cache:
-                replied_msg = message_cache[
-                    message.reply_to_message_id
-                ]
-
-            else:
-                replied_msg = Message.query.get(
-                    message.reply_to_message_id
-                )
-
-                message_cache[
-                    message.reply_to_message_id
-                ] = replied_msg
-
+            replied_msg = get_message(message.reply_to_message_id)
 
             if replied_msg and not replied_msg.deleted_for_everyone:
 
-                reply_sender_id = replied_msg.sender_id
-
-
-                if reply_sender_id in user_cache:
-                    reply_sender = user_cache[reply_sender_id]
-
-                else:
-                    reply_sender = User.query.get(
-                        reply_sender_id
-                    )
-
-                    user_cache[reply_sender_id] = reply_sender
-
+                reply_sender = get_user(replied_msg.sender_id)
 
                 reply_data = {
-
                     "id": replied_msg.id,
-
                     "content": replied_msg.content,
-
                     "sender_id": replied_msg.sender_id,
-
-                    "sender_name": (
-                        reply_sender.name
-                        if reply_sender
-                        else None
-                    ),
-
-                    "sender_username": (
-                        reply_sender.username
-                        if reply_sender
-                        else None
-                    )
+                    "sender_name": reply_sender.name if reply_sender else None,
+                    "sender_username": reply_sender.username if reply_sender else None,
                 }
 
 
-        # =============================
-        # MESSAGE RESPONSE
-        # =============================
         messages.append({
 
             "id": message.id,
@@ -122,9 +65,11 @@ def fetch_messages(conversation_id, current_user_id):
             "content": message.content,
 
 
-            "media_url": message.media_url,
-
-            "media_type": message.media_type,
+            # NEW MINIO MEDIA SYSTEM
+            "media": [
+                MessageMediaSerializer(media).to_dict()
+                for media in message.media
+            ],
 
 
             "sender_id": message.sender_id,
@@ -134,11 +79,10 @@ def fetch_messages(conversation_id, current_user_id):
 
             "created_at": message.created_at,
 
-
             "edited": message.edited,
 
-
             "status": message.status,
+
 
             "delivered_at": message.delivered_at,
 
@@ -152,18 +96,24 @@ def fetch_messages(conversation_id, current_user_id):
 
             "is_forwarded": message.is_forwarded,
 
-            "forwarded_from_id": (
-                message.forwarded_from_id
+            "forwarded_from_id": message.forwarded_from_id,
+
+
+            "deleted_for_everyone": (
+                message.deleted_for_everyone
             ),
 
 
             "reply_to": reply_data,
 
 
-            "reactions": build_reactions(
-                message.id
-            )
+            "reactions": build_reactions(message.id),
+
         })
+
+    print(
+     "DB MESSAGES:",
+         [(m.id, m.content, m.created_at) for m in query])
 
 
     return messages

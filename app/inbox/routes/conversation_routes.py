@@ -10,6 +10,8 @@ from app.inbox.api.conversations.accept_request import AcceptRequestAPI
 from app.inbox.api.conversations.reject_request import RejectRequestAPI
 from app.inbox.api.conversations.list_requests import ListRequestsAPI
 from app.inbox.api.conversations.restore_request import RestoreRequestAPI
+from app.inbox.api.inbox.open_media import OpenMediaAPI
+from app.inbox.api.inbox.get_media import GetArchiveMediaAPI
 
 def register_conversation_routes(bp):
 
@@ -82,9 +84,19 @@ def register_conversation_routes(bp):
     )
 
     bp.add_url_rule(
-    "/requests/<int:conversation_id>/restore",
-    view_func=RestoreRequestAPI.as_view(
-        "restore_request"
+        "/requests/<int:conversation_id>/restore",
+        view_func=RestoreRequestAPI.as_view(
+        "restore_request")
     )
-)
 
+    bp.add_url_rule(
+        "/media/<int:media_id>/open",
+        view_func=OpenMediaAPI.as_view("open_media"),
+        methods=["POST"]
+    )
+
+    bp.add_url_rule(
+        "/conversations/<int:conversation_id>/archive",
+        view_func=GetArchiveMediaAPI.as_view("get_archive_media"),
+        methods=["GET"]
+    )

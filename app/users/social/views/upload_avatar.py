@@ -1,53 +1,36 @@
 from flask.views import MethodView
 from flask import Blueprint, request, jsonify
-from werkzeug.utils import secure_filename
-import os
+from flask_jwt_extended import jwt_required, get_jwt_identity
+
+from app.models.user import User
+from app.users.profile.services.upload_avatar import upload_avatar
 
 upload_bp = Blueprint("upload", __name__)
 
-UPLOAD_FOLDER = os.path.join(
-    os.getcwd(),
-    "app",
-    "static",
-    "uploads"
-)
-
-os.makedirs(UPLOAD_FOLDER, exist_ok=True)
-
-ALLOWED_EXTENSIONS = {"png", "jpg", "jpeg", "gif"}
-
-def allowed_file(filename):
-    return "." in filename and filename.rsplit(".", 1)[1].lower() in ALLOWED_EXTENSIONS
-
 
 class UploadAvatarAPI(MethodView):
+    @jwt_required()
     def post(self):
-        print("Upload route hit:", request.files)
-
         if "file" not in request.files:
-            return jsonify({"error": "No file part"}), 400
+            return jsonify({"error": "No file uploaded"}), 400
 
         file = request.files["file"]
 
         if file.filename == "":
             return jsonify({"error": "No selected file"}), 400
 
-        if file and allowed_file(file.filename):
+        user_id = get_jwt_identity()
+        user = User.query.get(user_id)
 
-            filename = secure_filename(file.filename)
-            filepath = os.path.join(UPLOAD_FOLDER, filename)
+        if user is None:
+            return jsonify({"error": "User not found"}), 404
 
-            file.save(filepath)
+        result = upload_avatar(user, file)
 
-            print("ACTUAL FILEPATH:", filepath)
-
-            url = f"{request.host_url}static/uploads/{filename}"
-
-            return jsonify({
-                "url": url
-            }), 201
-
-        return jsonify({"error": "Invalid file type"}), 400
+        return jsonify({
+            "message": "Avatar uploaded successfully",
+            **result,
+        }), 200
 
 
 upload_bp.add_url_rule(

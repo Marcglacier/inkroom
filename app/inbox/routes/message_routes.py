@@ -57,3 +57,4 @@ def register_message_routes(bp):
         view_func=UnpinMessageAPI.as_view("unpin_message"),
         methods=["DELETE"]
     )
+

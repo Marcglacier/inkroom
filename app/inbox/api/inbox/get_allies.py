@@ -1,6 +1,7 @@
 from flask.views import MethodView
 from flask_jwt_extended import jwt_required, get_jwt_identity
-from app.models import Follow, User, Profile
+from app.models import Follow, User
+from app.storage.service import get_file_url
 
 class AlliesAPI(MethodView):
     @jwt_required()
@@ -15,12 +16,11 @@ class AlliesAPI(MethodView):
         users = User.query.filter(User.id.in_(ally_ids)).all()
         allies = []
         for u in users:
-            p = Profile.query.filter_by(user_id=u.id).first()
             allies.append({
                 "id": u.id,
                 "username": u.username,
                 "name": u.name,
-                "avatar": p.avatar_url if p else None
+                "avatar": (get_file_url(u.profile_picture)if u.profile_picture else None) 
             })
 
         return {"allies": allies}, 200
