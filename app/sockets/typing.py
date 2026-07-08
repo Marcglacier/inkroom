@@ -1,141 +1,83 @@
 from flask_socketio import emit, join_room
 from flask import request
-
 from app.sockets.messaging import sid_to_user
-
+from app.inbox.models.conversation_participant import ConversationParticipant
 
 
 def register_typing_events(socketio):
 
-
-
     @socketio.on("join_conversation")
     def join_conversation(data):
-
-
-        conversation_id = data.get(
-            "conversation_id"
-        )
-
-
-        if not conversation_id:
-            return
-
-
-
-        join_room(
-            f"conversation_{conversation_id}"
-        )
-
-
-
-        print(
-            "🔥 TYPING ROOM JOINED:",
-            conversation_id
-        )
-
-
-
-
+        cid = data.get("conversation_id")
+        if cid:
+            join_room(f"conversation_{cid}")
 
     @socketio.on("typing_start")
     def typing_start(data):
+        uid = sid_to_user.get(request.sid)
+        cid = data.get("conversation_id")
 
-
-        user_id = sid_to_user.get(
-            request.sid
-        )
-
-
-        if not user_id:
-            print(
-                "❌ NO USER FOR TYPING",
-                request.sid
-            )
+        if not uid or not cid:
             return
 
+        payload = {
+            "user_id": uid,
+            "conversation_id": cid,
+        }
 
-
-        conversation_id = data.get(
-            "conversation_id"
-        )
-
-
-
-        print(
-            "⌨️ START TYPING",
-            {
-                "user":user_id,
-                "conversation":conversation_id
-            }
-        )
-
-
-
+        # Users inside the conversation
         emit(
-
             "user:typing",
-
-            {
-                "user_id":user_id,
-                "conversation_id":conversation_id
-            },
-
-
-            room=f"conversation_{conversation_id}",
-
-            include_self=False
-
+            payload,
+            room=f"conversation_{cid}",
+            include_self=False,
         )
 
+        # Users outside the conversation (Raven Hall)
+        participants = ConversationParticipant.query.filter_by(
+            conversation_id=cid
+        ).all()
 
+        for participant in participants:
+            if participant.user_id == uid:
+                continue
 
-
-
-
+            socketio.emit(
+                "user:typing",
+                payload,
+                room=f"user_{participant.user_id}",
+            )
 
     @socketio.on("typing_stop")
     def typing_stop(data):
+        uid = sid_to_user.get(request.sid)
+        cid = data.get("conversation_id")
 
-
-        user_id = sid_to_user.get(
-            request.sid
-        )
-
-
-        if not user_id:
+        if not uid or not cid:
             return
 
-
-
-        conversation_id = data.get(
-            "conversation_id"
-        )
-
-
-
-        print(
-            "⌨️ STOP TYPING",
-            {
-                "user":user_id,
-                "conversation":conversation_id
-            }
-        )
-
-
+        payload = {
+            "user_id": uid,
+            "conversation_id": cid,
+        }
 
         emit(
-
             "user:stop_typing",
-
-            {
-                "user_id":user_id,
-                "conversation_id":conversation_id
-            },
-
-
-            room=f"conversation_{conversation_id}",
-
-            include_self=False
-
+            payload,
+            room=f"conversation_{cid}",
+            include_self=False,
         )
+
+        participants = ConversationParticipant.query.filter_by(
+            conversation_id=cid
+        ).all()
+
+        for participant in participants:
+            if participant.user_id == uid:
+                continue
+
+            socketio.emit(
+                "user:stop_typing",
+                payload,
+                room=f"user_{participant.user_id}",
+            )

@@ -1,4 +1,7 @@
 # app/inbox/models/message_media.py
+
+from datetime import datetime
+
 from app.extensions import db
 
 
@@ -10,20 +13,86 @@ class MessageMedia(db.Model):
     message_id = db.Column(
         db.Integer,
         db.ForeignKey("messages.id", ondelete="CASCADE"),
-        nullable=False
+        nullable=False,
+        index=True,
     )
 
-    file_url = db.Column(db.Text, nullable=False)
+    object_key = db.Column(
+        db.Text,
+        nullable=False,
+    )
 
-    file_type = db.Column(db.String(20))  # image/video/file
+    filename = db.Column(
+        db.String(255),
+        nullable=False,
+    )
 
-    uploaded_at = db.Column(
+    mime_type = db.Column(
+        db.String(120),
+        nullable=False,
+    )
+
+    size = db.Column(
+        db.BigInteger,
+        nullable=False,
+    )
+
+    created_at = db.Column(
         db.DateTime,
-        server_default=db.func.now()
+        default=datetime.utcnow,
+        nullable=False,
     )
+
+    #-----------General media metadata----------
+
+    media_kind = db.Column(
+        db.String(20),
+        nullable=False,
+        default="file",
+    )
+
+    # Future (optional)
+    waveform = db.Column(
+        db.JSON,
+        nullable=True,
+    )
+
+    # ---------- Audio metadata ----------
+    title = db.Column(
+        db.String(255),
+        nullable=True,
+    )
+
+    artist = db.Column(
+        db.String(255),
+        nullable=True,
+    )
+
+    album = db.Column(
+        db.String(255),
+        nullable=True,
+    )
+
+    duration = db.Column(
+        db.Integer,
+        nullable=True,
+    )
+
+    cover_object_key = db.Column(
+        db.Text,
+        nullable=True,
+    )
+    # ------------------------------------
 
     message = db.relationship(
         "Message",
-        backref="media",
-        lazy=True
+        back_populates="media",
     )
+
+    views = db.relationship(
+        "MediaView",
+        backref="media",
+        cascade="all, delete-orphan",
+        lazy=True,
+    )
+

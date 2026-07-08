@@ -1,8 +1,9 @@
-from app import create_app
-from app.extensions import socketio
 from dotenv import load_dotenv
 
 load_dotenv()
+
+from app import create_app
+from app.extensions import socketio
 
 app = create_app()
 

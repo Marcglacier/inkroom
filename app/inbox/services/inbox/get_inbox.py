@@ -1,95 +1,71 @@
 # app/inbox/services/inbox/get_inbox.py
 from sqlalchemy import distinct
+
 from app.extensions import db
-from app.inbox.models import Conversation, ConversationParticipant, ConversationClear, ConversationRequest, Message
-from app.models.user import User
-from app.inbox.services.messages.message_reaction_aggregator import build_reactions
+from app.inbox.models import (
+    Conversation,
+    ConversationParticipant,
+)
+from app.inbox.services.conversations.conversation_builder import (
+    build_conversation_card,
+)
+
 
 def get_inbox(user_id):
+    print("🔥🔥🔥 GET_INBOX CALLED 🔥🔥🔥")
     print("\n========== GET INBOX ==========\nUSER:", user_id)
 
-    convo_ids = [c[0] for c in db.session.query(distinct(ConversationParticipant.conversation_id))
-                 .filter(ConversationParticipant.user_id == user_id).all()]
+    convo_ids = [
+        c[0]
+        for c in (
+            db.session.query(
+                distinct(
+                    ConversationParticipant.conversation_id
+                )
+            )
+            .filter(
+                ConversationParticipant.user_id == user_id
+            )
+            .all()
+        )
+    ]
+
     results = []
 
     for convo_id in convo_ids:
-        print("\n--------------------\nCHECKING CONVO:", convo_id)
+
+        print("\n--------------------")
+        print("CHECKING CONVO:", convo_id)
+
         convo = Conversation.query.get(convo_id)
-        if not convo: print("❌ CONVO NOT FOUND"); continue
+
+        if not convo:
+            print("❌ CONVO NOT FOUND")
+            continue
+
         print("STATUS:", convo.status)
 
-        if convo.status == "pending":
-            req = ConversationRequest.query.filter_by(conversation_id=convo_id).first()
-            print("PENDING REQUEST:", req.id if req else None)
-            if req:
-                print("SENDER:", req.sender_id, "RECEIVER:", req.receiver_id, "CURRENT USER:", user_id)
-                if req.receiver_id == user_id:
-                    print("🚫 HIDING PENDING REQUEST FROM RECEIVER"); continue
-
-        if convo.status == "rejected":
-            req = ConversationRequest.query.filter_by(conversation_id=convo_id).first()
-            print("REJECTED REQUEST:", req.id if req else None)
-            if req:
-                print("SENDER:", req.sender_id, "RECEIVER:", req.receiver_id, "CURRENT USER:", user_id)
-                if req.receiver_id == user_id:
-                    print("🚫 HIDING REJECTED CONVERSATION FROM RECEIVER"); continue
-
-        participants = ConversationParticipant.query.filter_by(conversation_id=convo_id).all()
-        print("PARTICIPANTS:", [p.user_id for p in participants])
-        if not participants: print("❌ NO PARTICIPANTS"); continue
-
-        if len(participants) == 1 and participants[0].user_id == user_id:
-            other_user_id, username, name, avatar = user_id, "Saved Messages", "Saved Messages", None
-        else:
-            other = next((p for p in participants if p.user_id != user_id), None)
-            if not other: print("❌ OTHER USER NOT FOUND"); continue
-            user = User.query.get(other.user_id)
-            if not user: print("❌ USER RECORD NOT FOUND"); continue
-            other_user_id, username, name, avatar = user.id, user.username, user.name, user.profile_picture
-
-        clear = ConversationClear.query.filter_by(conversation_id=convo_id, user_id=user_id).first()
-        msg_query = Message.query.filter(Message.conversation_id == convo_id, Message.deleted_for_everyone.is_(False))
-        if clear:
-            print("CLEARED AT:", clear.cleared_at)
-            msg_query = msg_query.filter(Message.created_at > clear.cleared_at)
-
-        last_msg = msg_query.order_by(Message.created_at.desc()).first()
-        if not last_msg: print("❌ NO LAST MESSAGE"); continue
-        print("LAST MESSAGE:", last_msg.id, last_msg.content)
-        print("✅ ADDING TO INBOX:", convo_id, convo.status)
-
-        unread_query = Message.query.filter(
-            Message.conversation_id == convo_id,
-            Message.sender_id != user_id,
-            Message.read_at.is_(None),
-            Message.deleted_for_everyone.is_(False)
+        card = build_conversation_card(
+            convo,
+            user_id,
         )
-        if clear: unread_query = unread_query.filter(Message.created_at > clear.cleared_at)
 
-        results.append({
-            "conversation_id": convo_id,
-            "type": convo.type,
-            "status": convo.status,
-            "user_id": other_user_id,
-            "username": username,
-            "name": name,
-            "avatar": avatar,
-            "unread": unread_query.count(),
-            "last_message": {
-                "id": last_msg.id,
-                "content": last_msg.content,
-                "sender_id": last_msg.sender_id,
-                "sender_username": last_msg.sender.username if last_msg.sender else None,
-                "created_at": last_msg.created_at.isoformat(),
-                "reply_to": ({
-                    "id": last_msg.reply_to.id,
-                    "content": last_msg.reply_to.content,
-                    "sender_username": last_msg.reply_to.sender.username if last_msg.reply_to.sender else None
-                } if last_msg.reply_to else None),
-                "reactions": build_reactions(last_msg.id)
-            }
-        })
+        if not card:
+            continue
 
-    results.sort(key=lambda c: c["last_message"]["created_at"], reverse=True)
-    print("TOTAL INBOX ITEMS:", len(results), "\n================================\n")
+        print("✅ ADDING TO INBOX:", convo.id)
+
+        results.append(card)
+
+    results.sort(
+        key=lambda c: c["last_message"]["created_at"],
+        reverse=True,
+    )
+
+    print(
+        "TOTAL INBOX ITEMS:",
+        len(results),
+        "\n================================\n",
+    )
+
     return results

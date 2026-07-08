@@ -5,6 +5,7 @@ from app.inbox.models.conversation import Conversation
 from app.inbox.models.conversation_participant import ConversationParticipant
 from app.models.user import User
 from app.models.profile import Profile
+from app.storage.service import get_file_url
 
 
 class ConversationDetailAPI(MethodView):
@@ -40,9 +41,9 @@ class ConversationDetailAPI(MethodView):
             "name": user.name,
             "username": user.username,
             "avatar": (
-                profile.avatar_url
-                if profile
+                get_file_url(user.profile_picture)
+                if user.profile_picture
                 else None
-            )
+            ),
 
         },200

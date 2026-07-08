@@ -1,11 +1,13 @@
 # app/inbox/services/messages/react_to_message.py
 from datetime import datetime
 
-from app.extensions import db
+from app.extensions import db, socketio
 from app.inbox.models.message import Message
 from app.inbox.models.message_reaction import MessageReaction
 from app.inbox.models.conversation import Conversation
 from app.inbox.models.conversation_participant import ConversationParticipant
+from app.inbox.services.messages.message_reaction_aggregator import build_reactions
+
 
 
 def toggle_reaction(user_id, message_id, emoji):
@@ -45,6 +47,17 @@ def toggle_reaction(user_id, message_id, emoji):
         message_id=message_id
     ).first()
 
+    def emit_update():
+      socketio.emit(
+          "message:reaction",
+           {
+              "message_id": message.id,
+              "conversation_id": message.conversation_id,
+              "reactions": build_reactions(message.id),
+            },
+           room=f"conversation_{message.conversation_id}",
+        )
+
     # =========================
     # ADD
     # =========================
@@ -58,7 +71,12 @@ def toggle_reaction(user_id, message_id, emoji):
         db.session.add(reaction)
         db.session.commit()
 
-        return {"status": "added", "emoji": emoji}
+        emit_update()
+
+        return {
+            "status": "added",
+            "emoji": emoji,
+        }
 
     # =========================
     # REMOVE
@@ -67,6 +85,7 @@ def toggle_reaction(user_id, message_id, emoji):
         db.session.delete(existing)
         db.session.commit()
 
+        emit_update()
         return {"status": "removed", "emoji": emoji}
 
     # =========================
@@ -75,4 +94,5 @@ def toggle_reaction(user_id, message_id, emoji):
     existing.reaction = emoji
     db.session.commit()
 
+    emit_update()
     return {"status": "replaced", "emoji": emoji}

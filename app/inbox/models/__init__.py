@@ -8,3 +8,4 @@ from .conversation_participant import ConversationParticipant
 from .conversation_request import ConversationRequest
 from .conversation import Conversation
 from .message import Message
+from .media_view import MediaView

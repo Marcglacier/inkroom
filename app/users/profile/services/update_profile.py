@@ -16,7 +16,6 @@ def update_profile(user_id, data):
 
     profile.bio = data.get("bio", profile.bio)
     profile.location = data.get("location", profile.location)
-    profile.avatar_url = data.get("avatar_url", profile.avatar_url)
     profile.social_links = data.get("social_links", profile.social_links)
 
     if "birthday" in data:

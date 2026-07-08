@@ -1,34 +1,30 @@
 # app/inbox/services/messages/send_message.py
 
-import os
 from datetime import datetime
-from werkzeug.utils import secure_filename
 
 from app.extensions import db, socketio
 from app.inbox.models.message import Message
-from app.inbox.models.message_media import MessageMedia
-from app.inbox.services.conversations.conversation_service import ConversationService
+from app.inbox.services.conversations.conversation_service import (
+    ConversationService,
+)
+from app.inbox.services.messages.upload_media import upload_message_media
+from app.inbox.serializers.message_serializer import MessageSerializer
+from app.inbox.services.conversations.conversation_events import emit_conversation_updated
+from app.inbox.services.messages.message_status import ( get_message_status,)
 
-
-UPLOAD_FOLDER = "storage/messages"
-
-
-def send_message(sender_id, receiver_id, content=None, files=None, reply_to_message_id=None):
-
-    # =============================
-    # VALIDATE MESSAGE
-    # =============================
+def send_message(
+    sender_id,
+    receiver_id,
+    content=None,
+    files=None,
+    reply_to_message_id=None,
+    media_kind=None,
+):
     if not content and not files:
         return {"error": "Message must contain text or media"}, 400
 
-    # =============================
-    # GET OR CREATE CONVERSATION
-    # =============================
     convo = ConversationService.get_or_create(sender_id, receiver_id)
 
-    # =============================
-    # VALIDATE REPLY
-    # =============================
     if reply_to_message_id:
         parent = Message.query.get(reply_to_message_id)
 
@@ -38,9 +34,6 @@ def send_message(sender_id, receiver_id, content=None, files=None, reply_to_mess
         if parent.conversation_id != convo.id:
             return {"error": "Cannot reply to message in another conversation"}, 400
 
-    # =============================
-    # CREATE MESSAGE
-    # =============================
     msg = Message(
         conversation_id=convo.id,
         sender_id=sender_id,
@@ -48,72 +41,73 @@ def send_message(sender_id, receiver_id, content=None, files=None, reply_to_mess
         backup_content=content,
         edited=False,
         status="sent",
-        delivered_at=None,
-        read_at=None,
         created_at=datetime.utcnow(),
-        reply_to_message_id=reply_to_message_id
+        reply_to_message_id=reply_to_message_id,
     )
 
     db.session.add(msg)
-    db.session.flush()  # Get message ID before commit
+    db.session.flush()
+    print("AFTER FLUSH:", msg.id)
 
-    media_urls = []
-
-    # =============================
-    # HANDLE MEDIA FILES
-    # =============================
+    # Upload all media (images, videos, audio, metadata, album covers)
     if files:
+        upload_message_media(
+            msg, files, media_kind_override=media_kind,)
+        
+    db.session.commit()
+    db.session.refresh(msg)
 
-        os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+    status, online, in_chat = get_message_status(
+        receiver_id,
+        convo.id,
+        convo.status,)
 
-        for file in files:
+    msg.status = status
 
-            if not file.filename:
-                continue
+    if status == "delivered" and not msg.delivered_at:
+        msg.delivered_at = datetime.utcnow()
 
-            filename = secure_filename(file.filename)
+    elif status == "read":
+        now = datetime.utcnow()
 
-            path = os.path.join(UPLOAD_FOLDER, filename)
+        if not msg.delivered_at:
+            msg.delivered_at = now
 
-            file.save(path)
-
-            media = MessageMedia(
-                message_id=msg.id,
-                file_url=path,
-                file_type="image"
-            )
-
-            db.session.add(media)
-
-            media_urls.append(path)
+        if not msg.read_at:
+            msg.read_at = now
 
     db.session.commit()
+    db.session.refresh(msg)
+    
 
-    # =============================
-    # REALTIME EMIT
-    # =============================
+    serialized = MessageSerializer(msg).to_dict()
+
     socketio.emit(
         "new_message",
-        {
-            "message_id": msg.id,
-            "conversation_id": convo.id,
-            "sender_id": sender_id,
-            "content": msg.content,
-            "media": media_urls,
-            "reply_to_message_id": msg.reply_to_message_id,
-            "status": msg.status,
-            "created_at": msg.created_at.isoformat(),
-            "edited": msg.edited
-        },
-        room=f"user_{receiver_id}"
+        serialized,
+        room=f"user_{receiver_id}",
     )
 
-    return {
-        "message": "sent",
-        "message_id": msg.id,
-        "conversation_id": convo.id,
-        "status": msg.status,
-        "reply_to_message_id": msg.reply_to_message_id,
-        "media": media_urls,
-        "created_at": msg.created_at.isoformat()
-    }
+    socketio.emit(
+        "message:new",
+        serialized,
+        room=f"conversation_{convo.id}",
+    )
+
+    emit_conversation_updated(convo.id)
+
+    socketio.emit(
+        "message:status",
+        {
+            "message_id": msg.id,
+            "status": msg.status,
+        },
+        room=f"user_{sender_id}",
+    )
+
+    saved = Message.query.get(msg.id)
+    print("BEFORE RETURN:", saved.id if saved else None, 
+          saved.content if saved else None,)
+
+
+    return serialized
