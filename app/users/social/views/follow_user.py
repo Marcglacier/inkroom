@@ -4,9 +4,7 @@ from flask.views import MethodView
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from flask import jsonify
 
-from app.users.social.services import follow_user
-
-
+from app.users.social.actions.relationship_actions import follow_relationship
 class FollowUserAPI(MethodView):
 
     @jwt_required()
@@ -14,29 +12,22 @@ class FollowUserAPI(MethodView):
 
         viewer_id = int(get_jwt_identity())
 
-        result = follow_user(
+        result = follow_relationship(
             viewer_id,
             user_id
         )
 
         # service returned (payload, status_code)
-        if isinstance(result, tuple):
-            payload, status_code = result
-            return jsonify(payload), status_code
+        if result == "requested":
+            return jsonify({"status": result}), 202
 
-        status = result.get("status")
+        if result == "following":
+            return jsonify({"status": result}), 201
 
-        if status == "requested":
-            return jsonify(result), 202
+        if result == "already_following":
+            return jsonify({"status": result}), 200
 
-        if status == "following":
-            return jsonify(result), 201
+        if result == "request_exists":
+            return jsonify({"status": result}), 200
 
-        # NEW: toggle unfollow response
-        if status == "unfollowed":
-            return jsonify(result), 200
-
-        if "error" in result:
-            return jsonify(result), 400
-
-        return jsonify(result), 200
+        return jsonify({"status": result}), 200

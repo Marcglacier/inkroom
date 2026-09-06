@@ -4,7 +4,7 @@ from flask.views import MethodView
 from flask import jsonify, request
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from app.inbox.services.messages.delete_message import (delete_for_me, delete_for_everyone,)
-from app.inbox.models.message import Message
+from app.inbox.models.messages.message import Message
 
 
 class DeleteMessageAPI(MethodView):

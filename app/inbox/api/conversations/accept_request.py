@@ -6,8 +6,8 @@ from flask_jwt_extended import (
 
 from app.extensions import db
 
-from app.inbox.models.conversation import Conversation
-from app.inbox.models.conversation_request import (
+from app.inbox.models.conversations.conversation import Conversation
+from app.inbox.models.conversations.conversation_request import (
     ConversationRequest
 )
 

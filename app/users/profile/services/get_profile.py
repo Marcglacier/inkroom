@@ -24,7 +24,7 @@ def get_profile(viewer_id, user_id):
       **counts,
       "relationship": relationship["state"],
       "is_following": relationship["following"],
-      "is_followed_by": relationship["followed_back"],
+      "is_followed_by": relationship["followed_by"],
       "can_message": relationship["following"] and relationship["following"],
     })
 

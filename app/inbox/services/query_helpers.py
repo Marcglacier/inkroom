@@ -1,5 +1,5 @@
 # app/inbox/services/query_helpers.py
-from app.inbox.models.message import Message
+from app.inbox.models.messages.message import Message
 
 
 def unread_messages(user_id, conversation_id):

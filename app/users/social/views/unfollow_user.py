@@ -2,21 +2,24 @@ from flask.views import MethodView
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from flask import jsonify
 
-from app.users.social.services import unfollow_user
-
-
+from app.users.social.actions.relationship_actions import (
+    unfollow_relationship,
+)
 class UnfollowUserAPI(MethodView):
 
     @jwt_required()
-    def post(self, user_id):  # 👈 CHANGE delete → post
+    def post(self, user_id):
 
         follower_id = int(get_jwt_identity())
 
-        result = unfollow_user(follower_id, user_id)
+        result = unfollow_relationship(
+            follower_id,
+            user_id
+        )
 
         return jsonify({
-            "message": result.get("message", "User unfollowed"),
-            "status": "unfollowed",
+            "message": "User unfollowed",
+            "status": result,
             "follower_id": follower_id,
-            "following_id": user_id
+            "following_id": user_id,
         }), 200

@@ -1,11 +1,12 @@
+# app/users/social/views/get_following.py
+
 from flask.views import MethodView
 from flask import jsonify
 from flask_jwt_extended import jwt_required, get_jwt_identity
 
+from app.storage.service import get_file_url
 from app.users.social.services.get_following import get_following
 from app.users.social.services.relationship_service import get_relationship
-
-from app.models.profile import Profile
 
 
 class GetFollowingAPI(MethodView):
@@ -24,23 +25,17 @@ class GetFollowingAPI(MethodView):
                 "name": u.name,
 
                 "avatar_url": (
-                    Profile.query.filter_by(user_id=u.id)
-                    .first()
-                    .avatar_url
-                    if Profile.query.filter_by(user_id=u.id).first()
+                    get_file_url(u.profile_picture)
+                    if u.profile_picture
                     else None
                 ),
 
-                **{
-                    "is_following": relationship["following"],
-                    "is_followed_by": relationship["followed_back"],
-                    "relationship": relationship["state"],
-                    "is_mutual": relationship["is_mutual"],
-
-                    # 🔥 NEW
-                    "has_sent_request": relationship["has_sent_request"],
-                    "has_received_request": relationship["has_received_request"],
-                }
+                "is_following": relationship["following"],
+                "is_followed_by": relationship["followed_by"],
+                "relationship": relationship["state"],
+                "is_mutual": relationship["is_mutual"],
+                "has_sent_request": relationship["request_sent"],
+                "has_received_request": relationship["request_received"],
             }
             for u in following
             for relationship in [get_relationship(current_user_id, u.id)]

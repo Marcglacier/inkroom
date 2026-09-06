@@ -19,6 +19,7 @@ class Profile(db.Model):
     location = db.Column(db.String(100), default="")
     birthday = db.Column(db.Date, nullable=True)
     avatar_url = db.Column(db.String(255), default="")
+    cover_url = db.Column(db.String(255), default="")
     is_private = db.Column(db.Boolean, default=False, nullable=False)
 
     # 🎯 Flexible social links

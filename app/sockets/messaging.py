@@ -1,8 +1,8 @@
 from flask_socketio import emit, join_room, leave_room
 from flask import request
 from app.extensions import db
-from app.inbox.models.message import Message
-from app.inbox.models.conversation_participant import ConversationParticipant
+from app.inbox.models.messages.message import Message
+from app.inbox.models.conversations.conversation_participant import ConversationParticipant
 
 active_chambers = {}
 sid_to_user = {}
@@ -11,8 +11,17 @@ def register_messaging_events(socketio):
     @socketio.on("message:join")
     def join_chat(data):
         print("🔥 JOIN REQUEST RECEIVED:", data)
+        print("🚨 JOIN HANDLER CALLED SID:", request.sid)
+        print("🚨 DATA:", data)
         conversation_id, user_id = data.get("conversation_id"), data.get("user_id")
         if not conversation_id: return
+        participant = ( ConversationParticipant.query
+            .filter_by(  conversation_id=conversation_id,  user_id=user_id, )
+            .first() )
+        if not participant:
+            print( f"❌ Unauthorized join attempt: " f"user={user_id}, conversation={conversation_id}")
+            return
+        
         if user_id:
             active_chambers[int(user_id)] = int(conversation_id)
             sid_to_user[request.sid] = int(user_id)
@@ -21,13 +30,17 @@ def register_messaging_events(socketio):
         join_room(room)
         print("🔥 USER JOINED ROOM:", room)
         emit("room:joined", {"room": room})
+        if user_id:
+           active_chambers[int(user_id)] = int(conversation_id)
+           sid_to_user[request.sid] = int(user_id)
+
 
     @socketio.on("message:leave")
     def leave_chat(data):
         print("🚪 LEAVE REQUEST RECEIVED:", data)
         user_id, conversation_id = data.get("user_id"), data.get("conversation_id")
-        if user_id: active_chambers.pop(int(user_id), None)
-        if conversation_id: leave_room(f"conversation_{conversation_id}")
+        if user_id: active_chambers.pop(int(user_id), None) 
+        if conversation_id: leave_room(f"conversation_{conversation_id}") 
         print("🧹 ACTIVE CHAMBERS AFTER LEAVE:", active_chambers)
 
     @socketio.on("chamber:open")
@@ -40,7 +53,7 @@ def register_messaging_events(socketio):
 
         active_chambers[int(user_id)] = int(conversation_id)
 
-    print("🟢 ACTIVE CHAMBER:", active_chambers)
+    print("ACTIVE CHAMBER:", active_chambers)
 
 
     @socketio.on("chamber:close")
@@ -52,33 +65,5 @@ def register_messaging_events(socketio):
 
          active_chambers.pop(int(user_id), None)
 
-    print("🔴 ACTIVE CHAMBER:", active_chambers)  
+    print("INACTIVE CHAMBER:", active_chambers)
 
-    @socketio.on("message:read")
-    def mark_read(data):
-        print("👁 READ EVENT:", data)
-        conversation_id, user_id = data.get("conversation_id"), data.get("user_id")
-        if not conversation_id or not user_id: return
-        conversation_id, user_id = int(conversation_id), int(user_id)
-        current_chat = active_chambers.get(user_id)
-        print("🧭 CURRENT ACTIVE CHAT:", current_chat)
-        if current_chat != conversation_id:
-            print("🚫 USER NOT INSIDE CHAT - IGNORING READ")
-            return
-        print("👤 READER:", user_id, "💬 CONVERSATION:", conversation_id)
-        participant = ConversationParticipant.query.filter_by(conversation_id=conversation_id, user_id=user_id).first()
-        newest = (Message.query.filter_by(conversation_id=conversation_id)
-                  .filter(Message.sender_id != user_id)
-                  .order_by(Message.id.desc()).first())
-        if participant and newest:
-            participant.last_read_message_id = newest.id
-            print("📍 SAVED LAST READ MESSAGE:", newest.id)
-        messages = (Message.query.filter_by(conversation_id=conversation_id)
-                    .filter(Message.sender_id != user_id, Message.status != "read").all())
-        print("📦 MESSAGES TO MARK READ:", len(messages))
-        for msg in messages:
-            print("✅ MARKING READ:", msg.id)
-            msg.status = "read"
-            socketio.emit("message:status", {"message_id": msg.id, "status": "read"}, room=f"user_{msg.sender_id}")
-        db.session.commit()
-        print("🔥 READ RECEIPT + LAST READ COMPLETE")

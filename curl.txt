@@ -3,8 +3,15 @@ login
 curl -X POST http://127.0.0.1:5000/api/auth/login \
 -H "Content-Type: application/json" \
 -d '{
-"email": "marcicecream@students.uonbi.ac.ke",
+"email": "marcicecream32@gmail.com",
 "password": "Munenemarrc@3344"
+}'
+
+curl -X POST http://127.0.0.1:5000/api/auth/login \
+-H "Content-Type: application/json" \
+-d '{
+  "email": "mar@test.com",
+  "password": "TestPass123"
 }'
 
 

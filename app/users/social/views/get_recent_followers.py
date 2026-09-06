@@ -1,9 +1,7 @@
 from flask.views import MethodView
 from flask_jwt_extended import jwt_required, get_jwt_identity
 
-from app.users.social.services.get_recent_followers import (
-    get_recent_followers
-)
+from app.users.social.services.get_recent_followers import ( get_recent_followers)
 
 
 class RecentFollowersView(MethodView):

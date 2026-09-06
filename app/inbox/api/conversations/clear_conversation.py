@@ -1,44 +1,31 @@
-# app/inbox/views/clear_conversation.py
+# app/inbox/api/conversations/clear_conversation.py
 
 from flask.views import MethodView
-from flask_jwt_extended import jwt_required, get_jwt_identity
-from datetime import datetime
+from flask_jwt_extended import (
+    jwt_required,
+    get_jwt_identity,
+)
 
-from app.extensions import db
-from app.inbox.models.conversation_clear import ConversationClear
+from app.inbox.services.conversations.lifecycle.clear_conversation_service import (
+    ClearConversationService,
+)
 
 
 class ClearConversationAPI(MethodView):
 
     @jwt_required()
-    def delete(self, conversation_id):
+    def delete(
+        self,
+        conversation_id,
+    ):
 
         user_id = int(get_jwt_identity())
 
-        existing = ConversationClear.query.filter_by(
+        ClearConversationService(
             conversation_id=conversation_id,
-            user_id=user_id
-        ).first()
-
-        # -------------------------
-        # UPDATE EXISTING CLEAR
-        # -------------------------
-        if existing:
-            existing.cleared_at = datetime.utcnow()
-
-        # -------------------------
-        # CREATE CLEAR RECORD
-        # -------------------------
-        else:
-            clear = ConversationClear(
-                conversation_id=conversation_id,
-                user_id=user_id
-            )
-
-            db.session.add(clear)
-
-        db.session.commit()
+            user_id=user_id,
+        ).execute()
 
         return {
-            "message": "conversation cleared"
+            "message": "Conversation cleared.",
         }, 200

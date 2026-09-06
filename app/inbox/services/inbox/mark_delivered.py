@@ -2,7 +2,7 @@
 
 from datetime import datetime
 from app.extensions import db
-from app.inbox.models.message import Message
+from app.inbox.models.messages.message import Message
 
 
 def mark_delivered(conversation_id, user_id):

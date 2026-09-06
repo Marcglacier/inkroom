@@ -1,5 +1,5 @@
 from app.models.notification import Notification
-from app.models.profile import Profile
+from app.storage.service import get_file_url
 
 
 def get_notifications(user_id):
@@ -22,12 +22,6 @@ def get_notifications(user_id):
 
         print("🔔 Processing notification ID:", n.id, "type:", n.type)
 
-        profile = None
-
-        if n.actor:
-            profile = Profile.query.filter_by(
-                user_id=n.actor.id
-            ).first()
 
         item = {
             "id": n.id,
@@ -39,7 +33,11 @@ def get_notifications(user_id):
                 "id": n.actor.id if n.actor else None,
                 "username": n.actor.username if n.actor else None,
                 "name": n.actor.name if n.actor else None,
-                "avatar": profile.avatar_url if profile else None,
+                "avatar": (
+                    get_file_url(n.actor.profile_picture)
+                    if n.actor and n.actor.profile_picture
+                    else None
+                ),
             } if n.actor else None,
 
             "extra": {
@@ -53,5 +51,6 @@ def get_notifications(user_id):
         result.append(item)
 
     print("✅ FINAL RESULT SENT:", result)
+    print("📦 RAW DB IDS:", [n.id for n in notifications])
 
     return result

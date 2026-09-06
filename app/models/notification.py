@@ -76,7 +76,8 @@ class Notification(db.Model):
         "actor": {
             "id": self.actor.id,
             "username": self.actor.username,
-            "avatar": getattr(self.actor, "avatar_url", None)
+            "name": self.actor.name,
+            "avatar": self.actor.profile_picture,
         } if self.actor else None,
 
         "post": {

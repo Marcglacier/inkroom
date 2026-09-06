@@ -1,4 +1,5 @@
 # app/models/follow.py
+
 from datetime import datetime, timezone
 from app.extensions import db
 
@@ -11,45 +12,38 @@ class Follow(db.Model):
     follower_id = db.Column(
         db.Integer,
         db.ForeignKey("users.id", ondelete="CASCADE"),
-        nullable=False
+        nullable=False,
     )
 
     following_id = db.Column(
         db.Integer,
         db.ForeignKey("users.id", ondelete="CASCADE"),
-        nullable=False
+        nullable=False,
     )
 
     created_at = db.Column(
-        db.DateTime,
-        default=lambda: datetime.now(timezone.utc)
+        db.DateTime(timezone=True),
+        default=lambda: datetime.now(timezone.utc),
+        nullable=False,
     )
 
-    # requested → accepted → blocked
-    status = db.Column(
-        db.String(20),
-        default="requested",
-        nullable=False
-    )
-
-    # relationships
     follower = db.relationship(
         "User",
         foreign_keys=[follower_id],
-        backref="following_relationships"
+        backref="following_relationships",
     )
 
     following = db.relationship(
         "User",
         foreign_keys=[following_id],
-        backref="follower_relationships"
+        backref="follower_relationships",
     )
 
     __table_args__ = (
         db.UniqueConstraint(
             "follower_id",
             "following_id",
-            name="unique_user_follow"
+            name="unique_user_follow",
         ),
         db.Index("idx_follower_id", "follower_id"),
         db.Index("idx_following_id", "following_id"),

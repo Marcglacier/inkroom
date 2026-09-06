@@ -6,7 +6,7 @@ from flask.views import MethodView
 from flask_jwt_extended import jwt_required, get_jwt_identity
 
 from app.extensions import db
-from app.inbox.models.message import Message
+from app.inbox.models.messages.message import Message
 from app.inbox.services.inbox.get_inbox import get_inbox
 
 

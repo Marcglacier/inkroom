@@ -2,15 +2,26 @@
 
 from datetime import datetime
 
+from app.models.user import User
 from app.extensions import db, socketio
-from app.inbox.models.message import Message
-from app.inbox.services.conversations.conversation_service import (
+from app.inbox.models.messages.message import Message
+from app.inbox.services.conversations.core.conversation_service import (
     ConversationService,
 )
 from app.inbox.services.messages.upload_media import upload_message_media
+from app.inbox.models.messages.message_link import MessageLink
+from app.inbox.services.messages.link_detector import (
+    detect_links,
+    normalize_url,
+)
 from app.inbox.serializers.message_serializer import MessageSerializer
-from app.inbox.services.conversations.conversation_events import emit_conversation_updated
-from app.inbox.services.messages.message_status import ( get_message_status,)
+from app.inbox.services.conversations.core.conversation_events import (
+    emit_conversation_updated,
+)
+from app.inbox.services.messages.message_status import get_message_status
+from app.infrastructure.celery.tasks import (
+    fetch_message_link_preview_task,
+)
 
 def send_message(
     sender_id,
@@ -23,7 +34,15 @@ def send_message(
     if not content and not files:
         return {"error": "Message must contain text or media"}, 400
 
-    convo = ConversationService.get_or_create(sender_id, receiver_id)
+    receiver = db.session.get(User, receiver_id)
+
+    if not receiver:
+        return {"error": "This account no longer exists"}, 404
+
+    convo = ConversationService.get_or_create(
+        sender_id,
+        receiver_id,
+    )
 
     if reply_to_message_id:
         parent = Message.query.get(reply_to_message_id)
@@ -32,7 +51,9 @@ def send_message(
             return {"error": "Reply message not found"}, 400
 
         if parent.conversation_id != convo.id:
-            return {"error": "Cannot reply to message in another conversation"}, 400
+            return {
+                "error": "Cannot reply to message in another conversation"
+            }, 400
 
     msg = Message(
         conversation_id=convo.id,
@@ -47,20 +68,73 @@ def send_message(
 
     db.session.add(msg)
     db.session.flush()
+
     print("AFTER FLUSH:", msg.id)
 
-    # Upload all media (images, videos, audio, metadata, album covers)
+    # ============================================================
+    # MEDIA
+    # ============================================================
+
     if files:
         upload_message_media(
-            msg, files, media_kind_override=media_kind,)
-        
+            msg,
+            files,
+            media_kind_override=media_kind,
+        )
+    
+    # ============================================================
+    # LINK DETECTION
+    # ============================================================
+
+    detected_links = []
+
+    if content:
+        detected_links = detect_links(content)
+
+        for raw_url in detected_links:
+            normalized = normalize_url(raw_url)
+
+            print(f"🔗 LINK DETECTED: {raw_url}")
+            print(f"🔗 NORMALIZED: {normalized}")
+
+            # Create the link immediately with no preview.
+            # Celery will fill the preview in the background.
+            link = MessageLink(
+                message_id=msg.id,
+                url=raw_url,
+                normalized_url=normalized,
+            )
+
+            db.session.add(link)    
+    # ============================================================
+    # SAVE MESSAGE
+    # ============================================================
+
     db.session.commit()
     db.session.refresh(msg)
+
+    # ============================================================
+    # QUEUE LINK PREVIEWS
+    # ============================================================
+
+    for raw_url in detected_links:
+        normalized = normalize_url(raw_url)
+
+        fetch_message_link_preview_task.delay(
+            message_id=msg.id,
+            raw_url=raw_url,
+            normalized_url=normalized,
+        )
+
+    # ============================================================
+    # MESSAGE STATUS
+    # ============================================================
 
     status, online, in_chat = get_message_status(
         receiver_id,
         convo.id,
-        convo.status,)
+        convo.status,
+    )
 
     msg.status = status
 
@@ -78,9 +152,16 @@ def send_message(
 
     db.session.commit()
     db.session.refresh(msg)
-    
+
+    # ============================================================
+    # SERIALIZE
+    # ============================================================
 
     serialized = MessageSerializer(msg).to_dict()
+
+    # ============================================================
+    # SOCKET EVENTS
+    # ============================================================
 
     socketio.emit(
         "new_message",
@@ -106,8 +187,11 @@ def send_message(
     )
 
     saved = Message.query.get(msg.id)
-    print("BEFORE RETURN:", saved.id if saved else None, 
-          saved.content if saved else None,)
 
+    print(
+        "BEFORE RETURN:",
+        saved.id if saved else None,
+        saved.content if saved else None,
+    )
 
     return serialized

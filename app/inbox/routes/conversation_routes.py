@@ -12,6 +12,22 @@ from app.inbox.api.conversations.list_requests import ListRequestsAPI
 from app.inbox.api.conversations.restore_request import RestoreRequestAPI
 from app.inbox.api.inbox.open_media import OpenMediaAPI
 from app.inbox.api.inbox.get_media import GetArchiveMediaAPI
+from app.inbox.api.conversations.mark_conversation_read import MarkConversationReadAPI
+from app.inbox.api.conversations.MessageContext import MessageContextAPI
+from app.inbox.api.archive.archive_conversation_api import  ArchiveConversationAPI
+from app.inbox.api.archive.get_archived_conversations_api import ( GetArchivedConversationsAPI, )
+from app.inbox.api.archive.restore_conversation_api import RestoreConversationAPI
+from app.inbox.api.conversations.pins.pin_conversation_api import PinConversationAPI
+from app.inbox.api.conversations.pins.unpin_conversation_api import UnpinConversationAPI
+from app.inbox.api.conversations.mutes.mute_conversation_api import (
+    MuteConversationAPI,
+)
+
+from app.inbox.api.conversations.mutes.unmute_conversation_api import (
+    UnmuteConversationAPI,
+)
+from app.inbox.api.inbox.get_archive_links import GetArchiveLinksAPI
+from app.inbox.api.inbox.open_link import OpenLinkAPI
 
 def register_conversation_routes(bp):
 
@@ -94,9 +110,71 @@ def register_conversation_routes(bp):
         view_func=OpenMediaAPI.as_view("open_media"),
         methods=["POST"]
     )
+    bp.add_url_rule(
+    "/links/<int:link_id>/open",
+        view_func=OpenLinkAPI.as_view("open_link"),
+        methods=["POST"],
+    )
 
     bp.add_url_rule(
         "/conversations/<int:conversation_id>/archive",
         view_func=GetArchiveMediaAPI.as_view("get_archive_media"),
         methods=["GET"]
+    )
+    bp.add_url_rule(
+        "/conversations/<int:conversation_id>/archive/links",
+        view_func=GetArchiveLinksAPI.as_view("get_archive_links"),
+        methods=["GET"]
+    )
+
+    bp.add_url_rule( "/conversations/<int:conversation_id>/read", 
+        view_func=MarkConversationReadAPI.as_view("mark_conversation_read"),
+         methods=["POST"],)
+
+    bp.add_url_rule(
+        "/conversations/<int:conversation_id>/messages/<int:message_id>/context",
+        view_func=MessageContextAPI.as_view("message_context"),
+        methods=["GET"]
+        )
+
+    bp.add_url_rule(
+        "/conversations/<int:conversation_id>/archive", 
+        view_func=ArchiveConversationAPI.as_view("archive_conversation"),
+        methods=["POST"]            
+    )    
+
+    bp.add_url_rule(
+        "/archive",
+        view_func=GetArchivedConversationsAPI.as_view( "get_archived_conversations" ),
+        methods=["GET"]
+    )
+
+    bp.add_url_rule(
+        "/conversations/<int:conversation_id>/archive",
+        view_func=RestoreConversationAPI.as_view( "restore_conversation", ),
+        methods=["DELETE"],
+    )
+
+    bp.add_url_rule(
+        "/conversations/<int:conversation_id>/pin",
+        view_func=PinConversationAPI.as_view( "pin_conversation", ),
+    )
+
+    bp.add_url_rule(
+        "/conversations/<int:conversation_id>/pin",
+        view_func=UnpinConversationAPI.as_view( "unpin_conversation", ),
+    )
+
+    bp.add_url_rule(
+        "/conversations/<int:conversation_id>/mute",
+        view_func=MuteConversationAPI.as_view(
+            "mute_conversation",
+        ),
+    )
+
+    bp.add_url_rule(
+        "/conversations/<int:conversation_id>/mute",
+        view_func=UnmuteConversationAPI.as_view(
+            "unmute_conversation",
+        ),
     )

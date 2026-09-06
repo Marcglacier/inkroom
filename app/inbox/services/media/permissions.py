@@ -1,7 +1,7 @@
 # app/inbox/services/media/permissions.py
 
-from app.inbox.models.conversation_participant import ConversationParticipant
-from app.inbox.models.message_media import MessageMedia
+from app.inbox.models.conversations.conversation_participant import ConversationParticipant
+from app.inbox.models.messages.message_media import MessageMedia
 
 
 def can_access_media(user_id: int, media: MessageMedia) -> bool:

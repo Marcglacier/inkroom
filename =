@@ -1,0 +1,26 @@
+PHASE 1
+Application architecture
+        ↓
+PHASE 2
+Logging + request IDs
+        ↓
+PHASE 3
+Error handling
+        ↓
+PHASE 4
+Health + database observability   ← WE ARE HERE
+        ↓
+PHASE 5
+Automatic monitoring
+        ↓
+PHASE 6
+Metrics + dashboards
+        ↓
+PHASE 7
+SLO / SLI + error budgets
+        ↓
+PHASE 8
+Alerts
+        ↓
+PHASE 9
+Production hardening

@@ -25,6 +25,6 @@ def convert_requests_to_follow(user_id):
                 )
             )
 
-        db.session.delete(req)
+        req.status = "accepted"
 
     db.session.commit()

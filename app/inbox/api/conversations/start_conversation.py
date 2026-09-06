@@ -1,12 +1,15 @@
+# app/inbox/api/conversations/start_conversation.py
 from flask.views import MethodView
 from flask_jwt_extended import jwt_required, get_jwt_identity
-
+from app.models.user import User
 from app.extensions import db
 
-from app.inbox.models.conversation import Conversation
-from app.inbox.models.conversation_request import ConversationRequest
+from app.inbox.models.conversations.conversation import Conversation
+from app.inbox.models.conversations.conversation_request import ConversationRequest
 
 from app.models.follow import Follow
+from app.inbox.models.conversations.conversation_hide import ConversationHide
+from app.inbox.models.conversations.conversation_archive import ConversationArchive
 
 class StartConversationAPI(MethodView):
 
@@ -21,21 +24,37 @@ class StartConversationAPI(MethodView):
                 "error": "Cannot summon yourself"
             }, 400
 
+        receiver = db.session.get(User, user_id)
+
+        if not receiver:
+            return {
+                "error": "This account no longer exists"
+            }, 404
+
         # =========================
         # CHECK EXISTING CONVERSATION
         # =========================
 
         conversation = Conversation.find_between_users(
-            current_user,
-            user_id
-        )
+             current_user, user_id )
 
         if conversation:
-            return {
-                "conversation_id": conversation.id,
-                "status": conversation.status
-            }, 200
 
+            # Bring the chamber back to life
+            ConversationHide.query.filter_by(
+                conversation_id=conversation.id,
+                user_id=current_user,
+            ).delete()
+
+            ConversationArchive.query.filter_by(
+                conversation_id=conversation.id,
+                user_id=current_user,
+            ).delete()
+
+            db.session.commit()
+
+            return { "conversation_id": conversation.id,  "status": conversation.status, }, 200
+    
         # =========================
         # CHECK MUTUAL STATUS
         # =========================

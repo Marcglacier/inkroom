@@ -1,32 +1,40 @@
+# app/users/social/services/unfollow_user.py
+
 from app.extensions import db
 from app.models.follow import Follow
-from app.models.follow_request import FollowRequest
-from app.sockets.follow import emit_relationship_update
 
 
-def unfollow_user(user_id, target_id):
+class UnfollowUserService:
+    """
+    Handles removal of a direct follow relationship.
 
-    Follow.query.filter_by(
-        follower_id=user_id,
-        following_id=target_id
-    ).delete(synchronize_session=False)
+    This service is responsible only for the database mutation.
+    Relationship state is read through RelationshipService.
+    Notifications and socket events are handled by higher layers.
+    """
 
-    FollowRequest.query.filter(
-        (
-            (FollowRequest.requester_id == user_id) &
-            (FollowRequest.target_id == target_id)
+    def __init__(self, user_id: int, target_id: int):
+        self.user_id = user_id
+        self.target_id = target_id
+
+    def execute(self) -> str:
+
+        if self.user_id == self.target_id:
+            return "cannot_unfollow_self"
+
+        follow = (
+            Follow.query
+            .filter_by(
+                follower_id=self.user_id,
+                following_id=self.target_id,
+            )
+            .first()
         )
-        |
-        (
-            (FollowRequest.requester_id == target_id) &
-            (FollowRequest.target_id == user_id)
-        )
-    ).delete(synchronize_session=False)
 
-    db.session.commit()
+        if not follow:
+            return "not_following"
 
-    emit_relationship_update(user_id, target_id)
+        db.session.delete(follow)
+        db.session.commit()
 
-    return {
-        "message": "User unfollowed"
-    }
+        return "unfollowed"

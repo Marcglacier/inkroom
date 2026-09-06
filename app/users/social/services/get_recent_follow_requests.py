@@ -1,9 +1,8 @@
 from datetime import datetime, timedelta, timezone
-
+from app.storage.service import get_file_url
 from app.models.follow_request import FollowRequest
 from app.models.user import User
-from app.models.profile import Profile
-
+from app.extensions import db
 
 def get_recent_follow_requests(user_id, days=14):
 
@@ -22,11 +21,10 @@ def get_recent_follow_requests(user_id, days=14):
     result = []
 
     for req in requests:
-        sender = User.query.get(req.requester_id)
+        sender = db.session.get(User, req.requester_id)
         if not sender:
             continue
 
-        profile = Profile.query.filter_by(user_id=sender.id).first()
 
         created_at = req.created_at
 
@@ -39,7 +37,7 @@ def get_recent_follow_requests(user_id, days=14):
             "user_id": sender.id,
             "username": sender.username,
             "name": sender.name,
-            "avatar": profile.avatar_url if profile else None,
+            "avatar": (get_file_url(sender.profile_picture) if sender.profile_picture else None),
             "created_at": created_at.isoformat()
         })
 

@@ -1,6 +1,6 @@
 # app/inbox/services/inbox/get_last_message.py
 
-from app.inbox.models.message import Message
+from app.inbox.models.messages.message import Message
 
 
 def get_last_message(conversation_id):

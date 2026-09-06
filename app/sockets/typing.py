@@ -1,7 +1,7 @@
 from flask_socketio import emit, join_room
 from flask import request
 from app.sockets.messaging import sid_to_user
-from app.inbox.models.conversation_participant import ConversationParticipant
+from app.inbox.models.conversations.conversation_participant import ConversationParticipant
 
 
 def register_typing_events(socketio):

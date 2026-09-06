@@ -1,10 +1,12 @@
-# app/users/views/reject_follow.py
+# app/users/social/views/reject_follow.py
+
 from flask.views import MethodView
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from flask import jsonify
 
-from app.users.social.services import reject_follow
-
+from app.users.social.actions.relationship_actions import (
+    reject_follow_relationship,
+)
 
 class RejectFollowAPI(MethodView):
 
@@ -13,14 +15,23 @@ class RejectFollowAPI(MethodView):
 
         current_user_id = int(get_jwt_identity())
 
-        # ensure only owner can reject
+        # Only the owner of the request can reject it
         if current_user_id != user_id:
             return jsonify({"error": "Unauthorized"}), 403
 
-        result = reject_follow(user_id, follower_id)
+        result = reject_follow_relationship(
+            user_id,
+            follower_id
+        )
 
-        if isinstance(result, tuple):
-            data, code = result
-            return jsonify(data), code
+        if result == "request_not_found":
+            return jsonify({
+                "error": "Request not found"
+            }), 404
 
-        return jsonify(result), 200
+        return jsonify({
+            "message": "Follow request rejected",
+            "status": "rejected",
+            "follower_id": follower_id,
+            "following_id": user_id,
+        }), 200

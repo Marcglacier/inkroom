@@ -1,5 +1,5 @@
 # app/inbox/services/messages/edit_message.py
-from app.inbox.models.conversation import Conversation
+from app.inbox.models.conversations.conversation import Conversation
 from app.extensions import db, socketio
 from app.inbox.services.messages.message_status import (
     get_message_status,

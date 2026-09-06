@@ -1,0 +1,166 @@
+# app/inbox/models/messages/message.py
+from datetime import datetime, timedelta
+from sqlalchemy.dialects.postgresql import TSVECTOR
+from app.extensions import db
+
+
+class Message(db.Model):
+    __tablename__ = "messages"
+
+    # ================= CORE =================
+    id = db.Column(db.Integer, primary_key=True)
+
+    conversation_id = db.Column(
+        db.Integer,
+        db.ForeignKey("conversations.id", ondelete="CASCADE"),
+        nullable=True  # allow DM without conversation OR keep if required
+    )
+
+    sender_id = db.Column(
+        db.Integer,
+        db.ForeignKey("users.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True
+    )
+
+    receiver_id = db.Column(
+        db.Integer,
+        db.ForeignKey("users.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True
+    )
+
+    content = db.Column(db.Text, nullable=True,) 
+    message_type = db.Column( db.String(20),  nullable=False, default="text", )
+    system_event = db.Column( db.String(50) )
+    target_message_id = db.Column( db.Integer, db.ForeignKey(
+        "messages.id", ondelete="SET NULL"), nullable=True, )
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    # ================= MEDIA =================
+    media = db.relationship(
+       "MessageMedia",
+        back_populates="message",
+        cascade="all, delete-orphan",
+        passive_deletes=True,
+        lazy="selectin",        
+    )
+
+    # ================= LINKS =================
+    links = db.relationship(
+        "MessageLink",
+        back_populates="message",
+        cascade="all, delete-orphan",
+        passive_deletes=True,
+        lazy="selectin",
+    )
+
+    # ================= SEARCH =================
+    search_vector = db.Column(TSVECTOR)
+
+    # ================= THREADING =================
+    reply_to_message_id = db.Column(
+        db.Integer,
+        db.ForeignKey("messages.id", ondelete="SET NULL")
+    )
+
+    reply_to = db.relationship(
+        "Message",
+        remote_side="Message.id",
+        foreign_keys=[reply_to_message_id],
+        backref="replies"
+    )
+
+    forwarded_from_id = db.Column(
+        db.Integer,
+        db.ForeignKey("messages.id", ondelete="SET NULL"),
+        nullable=True,
+    )
+
+    forwarded_from = db.relationship(
+        "Message",
+        remote_side="Message.id",
+        foreign_keys=[forwarded_from_id],
+    )
+
+    is_forwarded = db.Column(
+        db.Boolean,
+        nullable=False,
+        default=False,
+    )
+
+    # ================= STATUS =================
+    edited = db.Column(db.Boolean, default=False)
+    status = db.Column(db.String(20), default="sent")
+
+    delivered_at = db.Column(db.DateTime)
+    read_at = db.Column(db.DateTime)
+
+    # ================= SOFT DELETE =================
+    deleted_for_everyone = db.Column(db.Boolean, default=False)
+    deleted_for_users = db.Column(db.JSON, default=list)
+    delete_requested_at = db.Column(db.DateTime)
+
+    backup_content = db.Column(db.Text)
+
+    # ================= RELATIONSHIPS =================
+    sender = db.relationship(
+        "User",
+        foreign_keys=[sender_id],
+        passive_deletes=True
+    )
+
+    pins = db.relationship(
+        "PinnedMessage",
+        backref="message",
+        lazy="select",
+        cascade="all, delete-orphan"
+    )
+
+    @property
+    def can_undo_delete(self):
+        return (
+           self.deleted_for_everyone
+           and self.delete_requested_at is not None
+           and datetime.utcnow() < self.delete_requested_at + timedelta(seconds=10)
+        )
+
+
+    # ================= SERIALIZER =================
+    def to_dict(self):
+        return {
+          "id": self.id,
+          "conversation_id": self.conversation_id,
+          "sender_id": self.sender_id,
+          "receiver_id": self.receiver_id,
+          "sender_username": self.sender.username if self.sender else None,
+          "content": self.content,
+          "media": [ media.to_dict() for media in self.media ],
+          "links": [ link.to_dict() for link in self.links ],
+          "reply_to": self.reply_to_message_id,
+
+          "created_at": (
+              self.created_at.isoformat() + "Z"
+              if self.created_at else None
+            ),
+
+          "edited": self.edited,
+          "status": self.status,
+
+          "delivered_at": (
+              self.delivered_at.isoformat() + "Z"
+              if self.delivered_at else None
+            ),
+
+          "read_at": (
+             self.read_at.isoformat() + "Z"
+             if self.read_at else None
+            ),
+
+          "is_forwarded": self.is_forwarded,
+          "message_type": self.message_type,
+          "system_event": self.system_event,
+          "target_message_id": self.target_message_id,
+        }
+    def __repr__(self):
+        return f"<Message {self.id} from={self.sender_id} to={self.receiver_id}>"
