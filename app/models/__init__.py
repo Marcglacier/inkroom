@@ -11,10 +11,13 @@ from .post_like import PostLike
 from .follow import Follow
 from .profile import Profile
 from .follow_request import FollowRequest
-from app.inbox.models.conversation import Conversation
-from app.inbox.models.conversation_participant import ConversationParticipant
-from app.inbox.models.message import Message
+from app.inbox.models.conversations.conversation import Conversation
+from app.inbox.models.conversations.conversation_participant import ConversationParticipant
+from app.inbox.models.messages.message import Message
 from app.models.repost import Repost
+from .pending_registration import PendingRegistration
+from app.models.pending_google_registration import PendingGoogleRegistration
+from .notification_settings import NotificationSettings
 __all__ = [
     "User",
     "Post",
@@ -23,12 +26,15 @@ __all__ = [
     "Message",
     "Conversation",
     "ConversationParticipant",
+    "PendingGoogleRegistration",
     "ChatRoom",
     "Like",
     "Notification",
+    "NotificationSettings",
     "PostLike",
     "Follow",
     "Profile",
     "FollowRequest",
-    "Repost"
+    "Repost",
+    "PendingRegistration"
 ]

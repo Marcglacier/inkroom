@@ -1,2 +1,4 @@
 "/c/Program Files/PostgreSQL/18/bin/psql.exe" -U postgres
 \c inkroom_db
+
+celery -A app.infrastructure.celery.celery_app.celery worker --loglevel=info --pool=solo

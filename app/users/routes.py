@@ -2,6 +2,7 @@
 
 from flask import Blueprint
 from .social.views.follow_user import FollowUserAPI
+from .social.views.unfollow_user import UnfollowUserAPI
 from .social.views.get_followers import GetFollowersAPI
 from .profile.views.get_profile import GetProfileAPI
 from .profile.views.update_profile import UpdateProfileAPI
@@ -9,7 +10,8 @@ from .social.views.follow_requests import FollowRequestsAPI
 from .social.views.accept_follow import AcceptFollowAPI
 from .social.views.reject_follow import RejectFollowAPI
 from .social.views.upload_avatar import UploadAvatarAPI
-
+from .profile.views.upload_cover import UploadCoverAPI
+from .profile.views.delete_account import DeleteAccountAPI
 from .social.views.get_following import GetFollowingAPI
 from .profile.views.get_user_by_username import GetUserByUsernameAPI
 from .social.views.relationship_view import RelationshipAPI
@@ -24,6 +26,9 @@ users_bp = Blueprint("users", __name__, url_prefix="/api/users")
 users_bp.add_url_rule("/<int:user_id>/follow",
     view_func=FollowUserAPI.as_view("follow_user"), methods=["POST"])
 
+users_bp.add_url_rule( "/<int:user_id>/unfollow",
+    view_func=UnfollowUserAPI.as_view("unfollow_user"), methods=["POST"]
+)
 # =====================
 # FOLLOW REQUESTS
 # =====================
@@ -49,13 +54,16 @@ users_bp.add_url_rule("/<int:user_id>/profile",
     view_func=GetProfileAPI.as_view("get_profile"), methods=["GET"])
 users_bp.add_url_rule("/me/profile",
     view_func=UpdateProfileAPI.as_view("update_profile"), methods=["GET", "PATCH"])
-
+users_bp.add_url_rule("/me",
+    view_func=DeleteAccountAPI.as_view("delete_account"), methods=["DELETE"],)
 # =====================
 # AVATAR UPLOAD
 # =====================
 users_bp.add_url_rule("/upload",
     view_func=UploadAvatarAPI.as_view("upload_avatar"), methods=["POST"])
 
+users_bp.add_url_rule( "/upload_cover",
+    view_func=UploadCoverAPI.as_view("upload_cover"), methods=["POST"],)
 # =====================
 # USER INFO
 # =====================

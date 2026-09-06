@@ -2,6 +2,7 @@
 from app.extensions import db, socketio
 from datetime import datetime
 from app.inbox.serializers.message_serializer import MessageSerializer
+from app.inbox.models.messages.pinned_message import PinnedMessage
 
 def emit_delete(message):
     socketio.emit(
@@ -43,10 +44,27 @@ def delete_for_everyone(message):
     message.deleted_for_everyone = True
     message.delete_requested_at = datetime.utcnow()
 
+    # Remove pin if this message is pinned
+    pin = PinnedMessage.query.filter_by(
+        message_id=message.id
+    ).first()
+
+    if pin:
+        db.session.delete(pin)
+
     db.session.commit()
 
     emit_delete(message)
 
+    if pin:
+        socketio.emit(
+            "message:unpinned",
+            {
+                "conversation_id": message.conversation_id,
+                "message_id": message.id,
+            },
+            room=f"conversation_{message.conversation_id}",
+        )
 
 def undo_delete(message, user_id):
 

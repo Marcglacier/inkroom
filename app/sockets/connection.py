@@ -4,8 +4,8 @@ from flask import request
 from app.sockets.presence_store import set_online, set_offline_later, online_users, last_seen
 from app.sockets.messaging import active_chambers, sid_to_user
 from app.extensions import db
-from app.inbox.models.message import Message
-from app.inbox.models.conversation_participant import ConversationParticipant
+from app.inbox.models.messages.message import Message
+from app.inbox.models.conversations.conversation_participant import ConversationParticipant
 from app.inbox.services.presence.presence_events import (emit_presence_status,)
 
 def register_connection_events(socketio):

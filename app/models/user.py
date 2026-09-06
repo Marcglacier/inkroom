@@ -10,13 +10,11 @@ class User(db.Model):
     # ================= CORE =================
     id = db.Column(db.Integer, primary_key=True)
 
-    username = db.Column(db.String(80), unique=True, nullable=False)
+    username = db.Column( db.String(80), unique=True, nullable=False, )
     name = db.Column(db.String(120))  # real display name
-
     email = db.Column(db.String(120), unique=True, nullable=False)
 
     password_hash = db.Column(db.Text)
-
     provider = db.Column(db.String(20), default="local")  # local | google
     google_id = db.Column(db.String(255))
 
@@ -49,15 +47,14 @@ class User(db.Model):
 
     # ================= STATUS =================
     online = db.Column(db.Boolean, default=False)
-
     last_seen = db.Column(db.DateTime, default=datetime.utcnow)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    is_deleted = db.Column(db.Boolean, default=False, nullable=False)
 
     # ================= RELATIONSHIPS =================
     messages_sent = db.relationship(
         "Message",
         foreign_keys="Message.sender_id",
-        cascade="all, delete-orphan",
         passive_deletes=True
     )
 

@@ -1,95 +1,103 @@
+# app/users/social/services/follow_user.py
+
 from app.extensions import db
 from app.models.follow import Follow
 from app.models.follow_request import FollowRequest
 from app.models.user import User
 from app.models.profile import Profile
-from app.users.services.helpers import response
-from app.notifications.services import (
-    create_follow_notification,
-    create_follow_request_notification
-)
-from app.sockets.follow import emit_relationship_update
+from app.users.social.services.relationship_service import RelationshipService
 
 
-def follow_user(user_id, target_id):
+class FollowUserService:
+    """
+    Handles the act of following a user.
 
-    if user_id == target_id:
-        return {"error": "Cannot follow yourself"}, 400
+    This service is responsible for MUTATION only.
 
-    user = User.query.get(target_id)
-    if not user:
-        return {"error": "User not found"}, 404
+    It does not:
+        - calculate relationship state
+        - calculate follow counts
+        - emit socket events
+        - create notifications
+        - build HTTP responses
 
-    is_private = (
-        Profile.query.filter_by(user_id=target_id).first()
-        or type("obj", (), {"is_private": False})()
-    ).is_private
+    Relationship facts are read through RelationshipService.
+    """
 
-    follow = Follow.query.filter_by(
-        follower_id=user_id,
-        following_id=target_id
-    ).first()
+    def __init__(self, user_id: int, target_id: int):
+        self.user_id = user_id
+        self.target_id = target_id
 
-    # UNFOLLOW
-    if follow:
-        db.session.delete(follow)
-        db.session.commit()
+    def execute(self) -> str:
+        self._validate()
 
-        emit_relationship_update(user_id, target_id)
+        relationship = RelationshipService(
+            self.user_id,
+            self.target_id,
+        ).get()
 
-        return response("Unfollowed user", "none",
-                        follower_id=user_id,
-                        following_id=target_id)
+        if relationship["following"]:
+            return "already_following"
 
-    # PRIVATE
-    if is_private:
-        req = FollowRequest.query.filter_by(
-            requester_id=user_id,
-            target_id=target_id
-        ).first()
+        if self._target_is_private():
+            return self._send_request()
 
-        if req:
-            db.session.delete(req)
-            db.session.commit()
+        return self._create_follow()
 
-            emit_relationship_update(user_id, target_id)
+    # ======================= VALIDATION ============================
 
-            return response("Follow request canceled", "none",
-                            follower_id=user_id,
-                            following_id=target_id)
+    def _validate(self):
+        if self.user_id == self.target_id:
+            raise ValueError("Cannot follow yourself")
 
-        db.session.add(FollowRequest(
-            requester_id=user_id,
-            target_id=target_id
-        ))
-        db.session.commit()
+        target = User.query.get(self.target_id)
 
-        create_follow_request_notification(
-            actor_id=user_id,
-            target_user_id=target_id
+        if target is None:
+            raise LookupError("User not found")
+
+    # ====================== PROFILE CHECK ==========================
+
+    def _target_is_private(self) -> bool:
+        profile = (
+            Profile.query
+            .filter_by(user_id=self.target_id)
+            .first()
         )
 
-        emit_relationship_update(user_id, target_id)
+        return profile.is_private if profile else False
 
-        return response("Follow request sent", "requested",
-                        follower_id=user_id,
-                        following_id=target_id)
+    # ========================= MUTATIONS ===========================
 
-    # PUBLIC FOLLOW
-    db.session.add(Follow(
-        follower_id=user_id,
-        following_id=target_id,
-        status="following"
-    ))
-    db.session.commit()
+    def _create_follow(self) -> str:
+        follow = Follow(
+            follower_id=self.user_id,
+            following_id=self.target_id,
+        )
 
-    create_follow_notification(
-        actor_id=user_id,
-        target_user_id=target_id
-    )
+        db.session.add(follow)
+        db.session.commit()
 
-    emit_relationship_update(user_id, target_id)
+        return "following"
 
-    return response("User followed", "following",
-                    follower_id=user_id,
-                    following_id=target_id)
+    def _send_request(self) -> str:
+        existing_request = (
+            FollowRequest.query
+            .filter_by(
+                requester_id=self.user_id,
+                target_id=self.target_id,
+            )
+            .first()
+        )
+
+        if existing_request:
+            return "request_exists"
+
+        request = FollowRequest(
+            requester_id=self.user_id,
+            target_id=self.target_id,
+        )
+
+        db.session.add(request)
+        db.session.commit()
+
+        return "requested"

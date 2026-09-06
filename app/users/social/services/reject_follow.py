@@ -1,27 +1,41 @@
+# app/users/social/services/reject_follow.py
+
 from app.extensions import db
 from app.models.follow_request import FollowRequest
-from app.users.services.helpers import response
-from app.sockets.follow import emit_relationship_update
 
 
-def reject_follow(user_id, requester_id):
+class RejectFollowService:
+    """
+    Rejects a pending follow request.
 
-    request = FollowRequest.query.filter_by(
-        requester_id=requester_id,
-        target_id=user_id
-    ).first()
+    This service is responsible only for the relationship mutation.
 
-    if not request:
-        return {"error": "Request not found"}, 404
+    It does not:
+        - calculate relationship state
+        - create notifications
+        - emit socket events
+        - build HTTP responses
+    """
 
-    db.session.delete(request)
-    db.session.commit()
+    def __init__(self, user_id: int, requester_id: int):
+        self.user_id = user_id
+        self.requester_id = requester_id
 
-    emit_relationship_update(user_id, requester_id)
+    def execute(self) -> str:
 
-    return response(
-        "Follow request rejected",
-        "rejected",
-        follower_id=requester_id,
-        following_id=user_id
-    )
+        request = (
+            FollowRequest.query
+            .filter_by(
+                requester_id=self.requester_id,
+                target_id=self.user_id,
+            )
+            .first()
+        )
+
+        if not request:
+            return "request_not_found"
+
+        db.session.delete(request)
+        db.session.commit()
+
+        return "rejected"

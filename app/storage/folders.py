@@ -1,6 +1,8 @@
 def avatar_folder(user_id: int) -> str:
     return f"avatars/{user_id}"
 
+def cover_folder(user_id: int) -> str:
+    return f"covers/{user_id}"
 
 def chat_folder(conversation_id: int) -> str:
     return f"chat/{conversation_id}"

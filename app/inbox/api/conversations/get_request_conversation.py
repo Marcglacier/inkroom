@@ -4,8 +4,8 @@ from flask_jwt_extended import (
     get_jwt_identity
 )
 
-from app.inbox.models.conversation import Conversation
-from app.inbox.models.message import Message
+from app.inbox.models.conversations.conversation import Conversation
+from app.inbox.models.messages.message import Message
 
 from app.models.user import User
 from app.models.profile import Profile

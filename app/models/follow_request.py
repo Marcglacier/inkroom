@@ -8,13 +8,30 @@ class FollowRequest(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
 
-    requester_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
-    target_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
+    requester_id = db.Column(
+        db.Integer,
+        db.ForeignKey("users.id", ondelete="CASCADE"),
+        nullable=False,
+    )
 
-    status = db.Column(db.String(20), default="pending")
+    target_id = db.Column(
+        db.Integer,
+        db.ForeignKey("users.id", ondelete="CASCADE"),
+        nullable=False,
+    )
 
     created_at = db.Column(
         db.DateTime(timezone=True),
         default=lambda: datetime.now(timezone.utc),
-        nullable=False
+        nullable=False,
+    )
+
+    __table_args__ = (
+        db.UniqueConstraint(
+            "requester_id",
+            "target_id",
+            name="unique_follow_request",
+        ),
+        db.Index("idx_follow_request_target", "target_id"),
+        db.Index("idx_follow_request_requester", "requester_id"),
     )

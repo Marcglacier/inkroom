@@ -3,7 +3,7 @@
 from datetime import datetime
 
 from app.extensions import db
-from app.inbox.models.media_view import MediaView
+from app.inbox.models.messages.media_view import MediaView
 
 
 def record_media_view(user_id: int, media_id: int):

@@ -3,7 +3,7 @@ from flask.views import MethodView
 from flask import request, jsonify
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from app.inbox.services.messages.edit_message import (edit_message,)
-from app.inbox.models.message import Message
+from app.inbox.models.messages.message import Message
 from datetime import datetime, timedelta
 
 

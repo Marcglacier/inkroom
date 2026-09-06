@@ -10,7 +10,7 @@ class Comment(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     content = db.Column(db.Text, nullable=False)
 
-    user_id = db.Column(db.Integer, db.ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    user_id = db.Column( db.Integer, db.ForeignKey("users.id", ondelete="SET NULL"), nullable=True )
     post_id = db.Column(db.Integer, db.ForeignKey("posts.id", ondelete="CASCADE"), nullable=False)
 
     parent_id = db.Column(db.Integer, db.ForeignKey("comments.id"), nullable=True)

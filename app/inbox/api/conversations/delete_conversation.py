@@ -1,21 +1,32 @@
 # app/inbox/views/delete_conversation.py
-from flask.views import MethodView
-from flask_jwt_extended import jwt_required, get_jwt_identity
-from flask import jsonify
 
-from app.inbox.services.conversations.delete_conversation import delete_conversation
+from flask import jsonify
+from flask.views import MethodView
+
+from flask_jwt_extended import (
+    get_jwt_identity,
+    jwt_required,
+)
+
+from app.inbox.services.conversations.lifecycle.delete_conversation_service import (
+    DeleteConversationService,
+)
 
 
 class DeleteConversationAPI(MethodView):
 
-    @jwt_required()
-    def delete(self, conversation_id):
+    decorators = [jwt_required()]
+
+    def delete(
+        self,
+        conversation_id,
+    ):
 
         user_id = int(get_jwt_identity())
 
-        result = delete_conversation(
-            conversation_id,
-            user_id
-        )
+        result = DeleteConversationService(
+            conversation_id=conversation_id,
+            user_id=user_id,
+        ).execute()
 
-        return jsonify(result)
+        return jsonify(result), 200

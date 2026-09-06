@@ -1,9 +1,11 @@
 # app/inbox/services/messages/pin_message.py
 from datetime import datetime
 from app.extensions import db, socketio
-from app.inbox.models.pinned_message import PinnedMessage
-from app.inbox.models.message import Message
-from app.inbox.models.conversation import Conversation
+from app.inbox.models.messages.pinned_message import PinnedMessage
+from app.inbox.models.messages.message import Message
+from app.inbox.models.conversations.conversation import Conversation
+from app.inbox.services.messages.create_system_message import create_system_message
+from app.inbox.serializers.message_serializer import MessageSerializer
 
 def pin_message(user_id, message_id):
 
@@ -44,6 +46,12 @@ def pin_message(user_id, message_id):
 
     db.session.add(pin)
     db.session.commit()
+    system = create_system_message(
+        conversation_id=msg.conversation_id,
+        sender_id=user_id,
+        event="message_pinned",
+        target_message_id=msg.id,
+    )
 
     payload = {
         "message_id": msg.id,
@@ -55,6 +63,11 @@ def pin_message(user_id, message_id):
        "message:pinned",
        payload,
        room=f"conversation_{msg.conversation_id}",
+    )
+    socketio.emit(
+        "message:new",
+        MessageSerializer(system).to_dict(),
+        room=f"conversation_{msg.conversation_id}",
     )
 
     payload["message"] = "pinned"

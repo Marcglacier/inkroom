@@ -1,6 +1,6 @@
 # app/inbox/services/inbox/get_other_user.py
 
-from app.inbox.models.conversation_participant import ConversationParticipant
+from app.inbox.models.conversations.conversation_participant import ConversationParticipant
 from app.models.user import User
 
 

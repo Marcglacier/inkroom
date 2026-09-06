@@ -8,8 +8,11 @@ from .views.mark_as_read import MarkAsReadAPI
 from .views.mark_all_as_read import MarkAllAsReadAPI
 from app.notifications.views.delete_notification import DeleteNotificationAPI
 from app.notifications.views.delete_read_notifications import DeleteReadNotificationsAPI
-from .views.mark_type_as_read import MarkTypeAsReadAPI
+from .views.mark_notification_as_read import (
+    MarkNotificationAsReadAPI
+)
 from .views.unread_groups import UnreadGroupsAPI
+from .views.settings import NotificationSettingsAPI
 
 notifications_bp = Blueprint(
     "notifications",
@@ -49,15 +52,15 @@ notifications_bp.add_url_rule(
 
 
 notifications_bp.add_url_rule(
-    "/read",
+    "/read/<string:notification_type>",
     view_func=DeleteReadNotificationsAPI.as_view("delete_read_notifications"),
     methods=["DELETE"]
 )
 
 notifications_bp.add_url_rule(
     "/read/<string:notification_type>",
-    view_func=MarkTypeAsReadAPI.as_view(
-        "mark_type_as_read"
+    view_func=MarkNotificationAsReadAPI.as_view(
+        "mark_notification_as_read"
     ),
     methods=["POST"]
 )
@@ -68,4 +71,12 @@ notifications_bp.add_url_rule(
         "unread_groups"
     ),
     methods=["GET"]
+)
+
+notifications_bp.add_url_rule(
+    "/settings",
+    view_func=NotificationSettingsAPI.as_view(
+        "notification_settings"
+    ),
+    methods=["GET", "POST", "DELETE"],
 )

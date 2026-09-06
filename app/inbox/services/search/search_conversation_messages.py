@@ -1,50 +1,73 @@
 # app/inbox/services/search/search_conversation_messages.py
-from app.extensions import db
-from app.inbox.models.message import Message
-from app.inbox.models.conversation_clear import ConversationClear
+
+from app.inbox.models.messages.message import Message
+from app.inbox.models.conversations.conversation_clear import ConversationClear
 
 
-def search_conversation(user_id, conversation_id, text: str):
-    print(f"\n=== SEARCH DEBUG ===")
-    print(f"User: {user_id} | Conv: {conversation_id} | Search: '{text}'")
+class SearchConversationMessagesService:
 
-    if not text or not text.strip():
-        print("Empty search text")
-        return []
+    def __init__(
+        self,
+        user_id: int,
+        conversation_id: int,
+        text: str,
+    ):
+        self.user_id = user_id
+        self.conversation_id = conversation_id
+        self.text = text.strip()
 
-    text = text.strip()
+    def execute(self):
 
-    # 1. Check last clear time
-    last_clear = (
-        ConversationClear.query
-        .filter_by(user_id=user_id, conversation_id=conversation_id)
-        .order_by(ConversationClear.cleared_at.desc())
-        .first()
-    )
+        if not self.text:
+            return []
+
+        query = self._build_query()
+        messages = query.all()
+        visible_messages = self._filter_visible_messages( messages )
+
+        return self._serialize(visible_messages)
+
+    def _build_query(self):
+
+        query = ( Message.query
+            .filter(
+                Message.conversation_id == self.conversation_id,
+                Message.content.ilike(f"%{self.text}%"),
+                Message.deleted_for_everyone.is_(False),
+            )
+        )
+        last_clear = self._get_last_clear()
+
+        if last_clear: query = query.filter( Message.created_at > last_clear.cleared_at )
+
+        return ( query .order_by(Message.created_at.desc()) )
+
+    def _get_last_clear(self):
+
+        return (
+            ConversationClear.query
+                .filter_by( user_id=self.user_id, conversation_id=self.conversation_id, )
+                .order_by( ConversationClear.cleared_at.desc() )
+                .first() )
     
-    print(f"Last cleared at: {last_clear.cleared_at if last_clear else 'NEVER'}")
+    def _filter_visible_messages(self, messages):
 
-    # 2. Base query - find ALL matching messages
-    base_query = Message.query.filter(
-        Message.conversation_id == conversation_id,
-        Message.content.ilike(f"%{text}%")
-    )
-    
-    total_matches = base_query.count()
-    print(f"Total messages containing '{text}': {total_matches}")
+        return [
+            message
+            for message in messages
+            if self.user_id not in (message.deleted_for_users or [])
+    ]
 
-    # 3. Apply clear filter
-    query = base_query
-    if last_clear:
-        query = query.filter(Message.created_at > last_clear.cleared_at)
-        print(f"Filtering messages after: {last_clear.cleared_at}")
+    def _serialize(self, messages):
 
-    results = query.order_by(Message.created_at.desc()).all()
-    
-    print(f"Final results after filter: {len(results)}")
-    for msg in results[:5]:   # print first 5
-        print(f"  → {msg.created_at} | {msg.content[:80]}")
+        serialized = []
 
-    print("=== END DEBUG ===\n")
-    
-    return results
+        for message in messages:
+
+            serialized.append({
+                "id": message.id, "conversation_id": message.conversation_id,
+                "content": message.content, "message_type": message.message_type,
+                "sender_id": message.sender_id, "created_at": message.created_at,
+            })
+
+        return serialized

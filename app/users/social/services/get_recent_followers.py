@@ -1,46 +1,57 @@
 from datetime import datetime, timedelta
 from app.models.follow import Follow
 from app.models.user import User
-from app.models.profile import Profile
+from app.storage.service import get_file_url
+from app.extensions import db
+from app.models.notification import Notification
+from app.notifications.constants import FOLLOW_USER
 
 
 def get_recent_followers(user_id, days=14):
-
     cutoff = datetime.utcnow() - timedelta(days=days)
 
-    follows = (
-        Follow.query
+    notifications = (
+        Notification.query
         .filter(
-            Follow.following_id == user_id,
-            Follow.created_at >= cutoff
+            Notification.user_id == user_id,
+            Notification.type == FOLLOW_USER,
+            Notification.created_at >= cutoff,
         )
-        .order_by(Follow.created_at.desc())
+        .order_by(Notification.created_at.desc())
         .all()
     )
 
-    result = []
+    unique = {}
 
-    for follow in follows:
-
-        follower_user = User.query.get(follow.follower_id)
+    for notification in notifications:
+        follower_user = db.session.get(User, notification.actor_id)
         if not follower_user:
             continue
 
-        profile = Profile.query.filter_by(user_id=follower_user.id).first()
+        is_following_back = (
+            Follow.query.filter_by(
+                follower_id=user_id,
+                following_id=follower_user.id,
+            ).first()
+            is not None
+        )
 
-        # 🔥 FIX: check if current user follows them back
-        is_following_back = Follow.query.filter_by(
-            follower_id=user_id,
-            following_id=follower_user.id
-        ).first() is not None
+        state = "mutual" if is_following_back else "follower"
 
-        result.append({
-            "id": follower_user.id,
-            "username": follower_user.username,
-            "name": follower_user.name,
-            "avatar": profile.avatar_url if profile else None,
-            "followed_at": follow.created_at.isoformat(),
-            "is_following_back": is_following_back
-        })
+        # Keep the most recent notification for each follower
+        if follower_user.id not in unique:
+            unique[follower_user.id] = {
+                "id": follower_user.id,
+                "username": follower_user.username,
+                "name": follower_user.name,
+                "avatar": (
+                    get_file_url(follower_user.profile_picture)
+                    if follower_user.profile_picture
+                    else None
+                ),
+                "followed_at": notification.created_at.isoformat(),
+                "state": state,
+                "notification_id": notification.id,
+            }
 
-    return result
+    return list(unique.values())

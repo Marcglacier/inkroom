@@ -1,6 +1,6 @@
 # app/inbox/queries/inbox_query.py
-from app.inbox.models.conversation import ConversationParticipant
-from app.inbox.models.message import Message
+from app.inbox.models.conversations.conversation import ConversationParticipant
+from app.inbox.models.messages.message import Message
 
 
 class InboxQuery:

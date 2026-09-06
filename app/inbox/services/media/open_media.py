@@ -1,6 +1,6 @@
 # app/inbox/services/media/open_media.py
 
-from app.inbox.models.message_media import MessageMedia
+from app.inbox.models.messages.message_media import MessageMedia
 from app.inbox.services.media.permissions import can_access_media
 from app.inbox.services.media.media_view import record_media_view
 

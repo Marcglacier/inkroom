@@ -1,50 +1,59 @@
+# app/users/social/services/accept_follow.py
 from app.extensions import db
 from app.models.follow import Follow
 from app.models.follow_request import FollowRequest
-from app.users.services.helpers import response
-from app.notifications.services import create_follow_accept_notification
-from app.sockets.follow import emit_relationship_update
 
 
-def accept_follow(user_id, requester_id):
+class AcceptFollowService:
+    """
+    Accepts a pending follow request.
 
-    request = FollowRequest.query.filter_by(
-        requester_id=requester_id,
-        target_id=user_id
-    ).first()
+    This service is responsible only for the relationship mutation.
 
-    if not request:
-        return {"error": "Request not found"}, 404
+    It does not:
+        - calculate relationship state
+        - create notifications
+        - emit socket events
+        - build HTTP responses
+    """
 
-    follow = Follow.query.filter_by(
-        follower_id=requester_id,
-        following_id=user_id
-    ).first()
+    def __init__(self, user_id: int, requester_id: int):
+        self.user_id = user_id
+        self.requester_id = requester_id
 
-    if not follow:
-        follow = Follow(
-            follower_id=requester_id,
-            following_id=user_id,
-            status="following"
+    def execute(self) -> str:
+
+        request = (
+            FollowRequest.query
+            .filter_by(
+                requester_id=self.requester_id,
+                target_id=self.user_id,
+            )
+            .first()
         )
-        db.session.add(follow)
-    else:
-        follow.status = "following"
 
-    db.session.delete(request)
-    db.session.commit()
+        if not request:
+            return "request_not_found"
 
-    create_follow_accept_notification(
-        actor_id=user_id,
-        target_user_id=requester_id
-    )
+        existing_follow = (
+            Follow.query
+            .filter_by(
+                follower_id=self.requester_id,
+                following_id=self.user_id,
+            )
+            .first()
+        )
 
-    # 🔥 REALTIME UPDATE
-    emit_relationship_update(user_id, requester_id)
+        if not existing_follow:
+            db.session.add(
+                Follow(
+                    follower_id=self.requester_id,
+                    following_id=self.user_id,
+                )
+            )
 
-    return response(
-        "Follow request accepted",
-        "following",
-        follower_id=requester_id,
-        following_id=user_id
-    )
+        db.session.delete(request)
+
+        db.session.commit()
+
+        return "accepted"

@@ -6,7 +6,7 @@ from app.inbox.services.messages.delete_message import undo_delete
 from datetime import datetime, timedelta
 
 from app.extensions import db
-from app.inbox.models.message import Message
+from app.inbox.models.messages.message import Message
 
 class UndoDeleteAPI(MethodView):
 

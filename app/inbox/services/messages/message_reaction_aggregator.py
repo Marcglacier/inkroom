@@ -1,6 +1,6 @@
 # app/inbox/services/messages/message_reaction_aggregator.py
 
-from app.inbox.models.message_reaction import MessageReaction
+from app.inbox.models.messages.message_reaction import MessageReaction
 from app.models.user import User
 from app.storage.service import get_file_url
 

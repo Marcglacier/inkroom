@@ -2,10 +2,10 @@
 from datetime import datetime
 
 from app.extensions import db, socketio
-from app.inbox.models.message import Message
-from app.inbox.models.message_reaction import MessageReaction
-from app.inbox.models.conversation import Conversation
-from app.inbox.models.conversation_participant import ConversationParticipant
+from app.inbox.models.messages.message import Message
+from app.inbox.models.messages.message_reaction import MessageReaction
+from app.inbox.models.conversations.conversation import Conversation
+from app.inbox.models.conversations.conversation_participant import ConversationParticipant
 from app.inbox.services.messages.message_reaction_aggregator import build_reactions
 
 
