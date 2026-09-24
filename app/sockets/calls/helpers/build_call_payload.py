@@ -3,6 +3,7 @@
 from app.inbox.models import Call
 from app.inbox.serializers.call_serializer import CallSerializer
 from app.models.user import User
+from app.storage.service import get_file_url
 
 
 def build_call_payload(
@@ -18,6 +19,10 @@ def build_call_payload(
             "id": caller.id,
             "username": caller.username,
             "name": caller.name,
-            "avatar": caller.profile_picture,
+            "avatar": (
+                get_file_url(caller.profile_picture)
+                if caller.profile_picture
+                else None
+            ),
         },
     }

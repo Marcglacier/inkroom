@@ -1,16 +1,13 @@
-# app/auth/views/google.py
+# app/auth/views/google/google.py
 from flask.views import MethodView
-from flask import url_for
+from flask import current_app
 from app.extensions import oauth
 
 
 class GoogleAPI(MethodView):
 
     def get(self):
-        redirect_uri = url_for(
-            "auth.google_callback",
-            _external=True
-        )
+        redirect_uri = current_app.config["GOOGLE_REDIRECT_URI"]
 
         return oauth.google.authorize_redirect(
             redirect_uri,

@@ -1,7 +1,7 @@
-# app/auth/views/google_callback.py
+# app/auth/views/google/google_callback.py
 
 from flask.views import MethodView
-from flask import redirect, current_app
+from flask import redirect, current_app, request
 from flask_jwt_extended import create_access_token
 from itsdangerous import URLSafeTimedSerializer
 
@@ -14,6 +14,7 @@ class GoogleCallbackAPI(MethodView):
 
     def get(self):
         google = oauth.google
+        frontend_url = f"{request.scheme}://{request.host.split(':')[0]}:5173"
 
         token = google.authorize_access_token()
         user_info = token["userinfo"]
@@ -35,7 +36,7 @@ class GoogleCallbackAPI(MethodView):
             )
 
             return redirect(
-                f"http://localhost:5173/oauth-success"
+                f"{frontend_url}/oauth-success"
                 f"?token={access_token}"
                 f"&new=false"
             )
@@ -50,8 +51,8 @@ class GoogleCallbackAPI(MethodView):
 
         if user:
             return redirect(
-                "http://localhost:5173/login"
-                "?error=account_exists"
+                f"{frontend_url}/login"
+                f"?error=account_exists"
             )
 
         # --------------------------------------------------
@@ -95,6 +96,6 @@ class GoogleCallbackAPI(MethodView):
         # --------------------------------------------------
 
         return redirect(
-            "http://localhost:5173/choose-username"
+            f"{frontend_url}/choose-username"
             f"?token={onboarding_token}"
         )

@@ -36,7 +36,7 @@ def create_app():
         app,
         resources={
             r"/api/*": {
-                "origins": "http://localhost:5173"
+                "origins": r"^https://[^:]+:5173$"
             }
         },
         supports_credentials=True,
@@ -101,12 +101,6 @@ def create_app():
 
         clear_request_id()
 
-    # CORS PREFLIGHT
-    @app.before_request
-    def handle_preflight():
-
-        if request.method == "OPTIONS":
-            return make_response("", 200)
 
     # EXTENSIONS
     db.init_app(app)
@@ -117,6 +111,9 @@ def create_app():
 
     mail.init_app(app)
 
+    print(
+        "SOCKET.IO CORS:", app.config["SOCKETIO_CORS_ORIGINS"]
+    )
     socketio.init_app(
         app,
         cors_allowed_origins=app.config[

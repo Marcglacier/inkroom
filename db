@@ -2,3 +2,5 @@
 \c inkroom_db
 
 celery -A app.infrastructure.celery.celery_app.celery worker --loglevel=info --pool=solo
+npm run dev -- --host 0.0.0.0
+PYTHONUTF8=1 python run.py

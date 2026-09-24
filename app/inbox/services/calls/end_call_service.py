@@ -14,6 +14,9 @@ from app.inbox.serializers.call_serializer import CallSerializer
 from app.inbox.services.conversations.core.conversation_guard import (
     ConversationGuard,
 )
+from app.inbox.services.calls.media_switch_state import (
+    media_switch_state,
+)
 from app.models.user import User
 
 
@@ -68,6 +71,7 @@ class EndCallService:
         call.ended_at = datetime.utcnow()
 
         db.session.commit()
+        media_switch_state.clear(call.id)
 
         # ========================================================
         # NOTIFY BOTH PARTICIPANTS

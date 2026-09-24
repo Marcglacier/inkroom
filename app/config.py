@@ -73,6 +73,8 @@ class Config:
 
     GOOGLE_CLIENT_SECRET = os.getenv( "GOOGLE_CLIENT_SECRET" )
 
+    GOOGLE_REDIRECT_URI = os.getenv(  "GOOGLE_REDIRECT_URI"  )
+
     # =========================================================
     # MAIL
     # =========================================================
@@ -111,10 +113,7 @@ class Config:
     # SOCKET.IO
     # =========================================================
 
-    SOCKETIO_CORS_ORIGINS = os.getenv(
-        "SOCKETIO_CORS_ORIGINS",
-        "http://localhost:5173"
-    )
+    SOCKETIO_CORS_ORIGINS = "*"
     
     SOCKETIO_MESSAGE_QUEUE = os.getenv(
         "SOCKETIO_MESSAGE_QUEUE",
