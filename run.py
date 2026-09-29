@@ -5,10 +5,17 @@ load_dotenv()
 
 import os
 import socket
+import subprocess
+from pathlib import Path
 
 from app import create_app
 from app.extensions import socketio
 from app.infrastructure import start_monitoring
+
+
+CERT_DIR = Path("certs/dev")
+CERT_FILE = CERT_DIR / "server.pem"
+KEY_FILE = CERT_DIR / "server-key.pem"
 
 
 def get_local_ip() -> str:
@@ -20,36 +27,47 @@ def get_local_ip() -> str:
     finally:
         connection.close()
 
-def ensure_certificate(local_ip: str) -> tuple[str, str]:
-    certificate = f"{local_ip}+2.pem"
-    key = f"{local_ip}+2-key.pem"
 
-    if os.path.exists(certificate) and os.path.exists(key):
+def ensure_certificate(local_ip: str) -> tuple[str, str]:
+    CERT_DIR.mkdir(parents=True, exist_ok=True)
+
+    if CERT_FILE.exists() and KEY_FILE.exists():
         print(f"🔐 USING EXISTING CERTIFICATE: {local_ip}")
-        return certificate, key
+        return str(CERT_FILE), str(KEY_FILE)
 
     print(f"🔐 GENERATING CERTIFICATE: {local_ip}")
 
-    result = os.system(
-        f'mkcert {local_ip} localhost 127.0.0.1'
+    result = subprocess.run(
+        [
+            "mkcert",
+            "-cert-file",
+            str(CERT_FILE),
+            "-key-file",
+            str(KEY_FILE),
+            local_ip,
+            "localhost",
+            "127.0.0.1",
+        ],
+        check=False,
     )
 
-    if result != 0:
+    if result.returncode != 0:
         raise RuntimeError(
             "Failed to generate HTTPS certificate."
         )
 
-    if not os.path.exists(certificate):
+    if not CERT_FILE.exists():
         raise RuntimeError(
-            f"Certificate was not created: {certificate}"
+            f"Certificate was not created: {CERT_FILE}"
         )
 
-    if not os.path.exists(key):
+    if not KEY_FILE.exists():
         raise RuntimeError(
-            f"Certificate key was not created: {key}"
+            f"Certificate key was not created: {KEY_FILE}"
         )
 
-    return certificate, key
+    return str(CERT_FILE), str(KEY_FILE)
+
 
 app = create_app()
 
