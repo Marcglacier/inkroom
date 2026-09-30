@@ -160,7 +160,8 @@ def fetch_messages(
             "message_type": message.message_type,
             "system_event": message.system_event,
             "target_message_id": message.target_message_id,
-
+            "call_id": message.call_id,
+            "call_type": message.call_type,
             "media": media,
             "links": [ link.to_dict() for link in message.links ],
             "sender_id": message.sender_id,

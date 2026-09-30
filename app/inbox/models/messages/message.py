@@ -35,6 +35,9 @@ class Message(db.Model):
     system_event = db.Column( db.String(50) )
     target_message_id = db.Column( db.Integer, db.ForeignKey(
         "messages.id", ondelete="SET NULL"), nullable=True, )
+    call_id = db.Column( db.Integer, db.ForeignKey( "calls.id", ondelete="SET NULL", ),
+        nullable=True, index=True, )
+    call_type = db.Column( db.String(20), nullable=True, )
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
     # ================= MEDIA =================
@@ -161,6 +164,9 @@ class Message(db.Model):
           "message_type": self.message_type,
           "system_event": self.system_event,
           "target_message_id": self.target_message_id,
+          "call_id": self.call_id,
+          "call_type": self.call_type,
+          
         }
     def __repr__(self):
         return f"<Message {self.id} from={self.sender_id} to={self.receiver_id}>"

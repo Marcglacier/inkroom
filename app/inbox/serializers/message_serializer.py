@@ -79,6 +79,8 @@ class MessageSerializer(SerializerMixin):
             "message_type": m.message_type,
             "system_event": m.system_event,
             "target_message_id": m.target_message_id,
+            "call_id": m.call_id,
+            "call_type": m.call_type,
 
             "reply_to": (
                 {

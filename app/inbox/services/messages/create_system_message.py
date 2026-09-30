@@ -8,6 +8,8 @@ def create_system_message(
     sender_id,
     event,
     target_message_id=None,
+    call_id=None,
+    call_type=None,
 ):
     msg = Message(
         conversation_id=conversation_id,
@@ -16,11 +18,13 @@ def create_system_message(
         message_type="system",
         system_event=event,
         target_message_id=target_message_id,
+        call_id=call_id,
+        call_type=call_type,
         content=None,
         status="sent",
     )
 
     db.session.add(msg)
-    db.session.commit()
+    db.session.flush()
 
     return msg

@@ -30,7 +30,8 @@ def build_payload( m ):
         "message_type": m.get("message_type", "text"),
         "system_event": m.get("system_event"),
         "target_message_id": m.get("target_message_id"),
-
+        "call_id": m.get("call_id"),
+        "call_type": m.get("call_type"),
         "created_at": m["created_at"],
 
         "edited": m.get("edited", False),
