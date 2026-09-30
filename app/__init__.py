@@ -18,6 +18,9 @@ from app.infrastructure import (
     configure_logging, generate_request_id, set_request_id, get_request_id,
     clear_request_id, RequestLogger, ExceptionHandler, health_bp, monitoring_bp, start_monitoring,
 )
+from app.inbox.services.calls.missed_call_monitor import (
+    MissedCallMonitor,
+)
 
 def create_app():
 
@@ -136,7 +139,11 @@ def create_app():
 
     # SOCKET EVENTS (CENTRALIZED)
     register_socket_events(socketio)
-
+    
+    # MISSED CALL MONITOR
+    missed_call_monitor = MissedCallMonitor(app)
+    missed_call_monitor.start()
+    
     # BLUEPRINTS
     app.register_blueprint(auth_bp, url_prefix="/api/auth")
     app.register_blueprint(blog_bp, url_prefix="/api/blog")
