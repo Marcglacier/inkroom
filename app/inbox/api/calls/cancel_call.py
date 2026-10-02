@@ -3,7 +3,7 @@ from flask.views import MethodView
 from flask import jsonify
 from flask_jwt_extended import jwt_required, get_jwt_identity
 
-from app.inbox.services.calls.cancel_call_service import (
+from app.inbox.services.calls.call_room.cancel_call_service import (
     CancelCallService,
 )
 from app.inbox.serializers.call_serializer import CallSerializer

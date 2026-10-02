@@ -1,12 +1,21 @@
 from flask_socketio import join_room, emit
 from flask_jwt_extended import decode_token
-from flask import request
-from app.sockets.presence_store import set_online, set_offline_later, online_users, last_seen
+from flask import current_app, request
+from .presence_store import (
+    set_online, set_offline_later, online_users, last_seen, has_other_connections
+    )
 from app.sockets.messaging import active_chambers, sid_to_user
 from app.extensions import db
 from app.inbox.models.messages.message import Message
 from app.inbox.models.conversations.conversation_participant import ConversationParticipant
 from app.inbox.services.presence.presence_events import (emit_presence_status,)
+from app.inbox.services.calls.marks.mark_user_calls_disconnected import (
+    MarkUserCallsDisconnected,
+)
+from app.inbox.services.calls.marks.mark_user_calls_reconnected import (
+    MarkUserCallsReconnected,
+)
+
 
 def register_connection_events(socketio):
 
@@ -22,6 +31,7 @@ def register_connection_events(socketio):
         try:
             decoded = decode_token(token)
             user_id = int(decoded["sub"])
+            MarkUserCallsReconnected(user_id).execute()
             set_online(user_id, request.sid)
 
             # Mark "sent" messages as "delivered"
@@ -77,14 +87,18 @@ def register_connection_events(socketio):
             active_chambers.pop(user_id, None)
             print("🧹 REMOVED CHAT USER:", user_id)
 
+        # If user has other connections, don't mark offline
+        if user_id and not has_other_connections(user_id, request.sid):
+            MarkUserCallsDisconnected(user_id).execute()
+
         # Start offline timer
         set_offline_later(
-           request.sid,
-           lambda uid:
+            request.sid,
+            lambda uid:
                 emit_presence_status(
                     user_id=uid,
                     online=False,
                     last_seen=last_seen.get(uid),
-                )
+                ),
         )
         print("⏳ OFFLINE TIMER STARTED")

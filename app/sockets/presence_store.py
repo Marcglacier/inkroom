@@ -71,3 +71,7 @@ def set_offline_later(sid: str, callback, delay: int = 20) -> None:
     timer = threading.Timer(delay, go_offline)
     disconnect_timers[sid] = timer
     timer.start()
+
+def has_other_connections(user_id: int, sid: str) -> bool:
+    sockets = user_connections.get(user_id, set())
+    return any(socket_id != sid for socket_id in sockets)    

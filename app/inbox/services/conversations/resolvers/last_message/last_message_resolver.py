@@ -1,9 +1,10 @@
 # app/inbox/services/conversations/resolvers/last_message_resolver.py
-
+from sqlalchemy import cast 
+from sqlalchemy.dialects.postgresql import JSONB
 from app.inbox.services.conversations.resolvers.clears.ConversationClearResolver import (
     ConversationClearResolver,
 )
-from app.inbox.models.messages.message import ( Message, )
+from app.inbox.models.messages.message import ( Message )
 
 from .last_message_result import LastMessageResult
 
@@ -24,6 +25,7 @@ class LastMessageResolver:
         query = Message.query.filter(
             Message.conversation_id == conversation_id,
             Message.deleted_for_everyone.is_(False),
+            ~cast(Message.deleted_for_users, JSONB).contains([user_id]),
         )
 
         query = clear.apply(query)

@@ -10,6 +10,7 @@ def create_system_message(
     target_message_id=None,
     call_id=None,
     call_type=None,
+    content=None,
 ):
     msg = Message(
         conversation_id=conversation_id,
@@ -20,7 +21,7 @@ def create_system_message(
         target_message_id=target_message_id,
         call_id=call_id,
         call_type=call_type,
-        content=None,
+        content=content,
         status="sent",
     )
 

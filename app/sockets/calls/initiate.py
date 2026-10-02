@@ -4,7 +4,7 @@ from flask import request
 
 from app.extensions import db
 from app.models.user import User
-from app.inbox.services.calls.mark_call_ringing_service import (
+from app.inbox.services.calls.marks.mark_call_ringing_service import (
     MarkCallRingingService,
 )
 

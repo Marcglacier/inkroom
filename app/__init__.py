@@ -18,7 +18,7 @@ from app.infrastructure import (
     configure_logging, generate_request_id, set_request_id, get_request_id,
     clear_request_id, RequestLogger, ExceptionHandler, health_bp, monitoring_bp, start_monitoring,
 )
-from app.inbox.services.calls.missed_call_monitor import (
+from app.inbox.services.calls.connections.missed_call_monitor import (
     MissedCallMonitor,
 )
 

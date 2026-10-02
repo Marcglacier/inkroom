@@ -6,7 +6,7 @@ from .helpers import (
     resolve_call, emit_media_changed,
 )
 
-from app.inbox.services.calls.media_switch_state import (
+from app.inbox.services.calls.connections.media_switch_state import (
     media_switch_state,
 )
 
