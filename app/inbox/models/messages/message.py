@@ -90,6 +90,7 @@ class Message(db.Model):
         db.Boolean,
         nullable=False,
         default=False,
+        server_default=db.text("false"),
     )
 
     # ================= STATUS =================

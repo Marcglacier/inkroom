@@ -217,3 +217,8 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# Local development secrets and request scratch files
+/curl.txt
+/certs/dev/server-key.pem
+/certs/dev/server.pem
