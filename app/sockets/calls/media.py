@@ -1,6 +1,6 @@
 # app/sockets/calls/media.py
 
-
+from app.inbox.services.settings.blocks.block_policy import BlockPolicy
 from .helpers import (
     get_authenticated_socket_user,
     resolve_call, emit_media_changed,
@@ -77,6 +77,15 @@ def register_call_media(socketio):
                 "error": "User is not part of this call.",
             }
 
+        # BLOCK CHECK
+        if BlockPolicy.blocks_either_user(
+            call.caller_id,
+            call.receiver_id,
+        ):
+            return {
+                "ok": False,
+                "error": "Calling is unavailable.",
+            }
         if call.status != "accepted":
             return {
                 "ok": False,
@@ -191,6 +200,15 @@ def register_call_media(socketio):
                 "error": "User is not part of this call.",
             }
 
+        # BLOCK CHECK
+        if BlockPolicy.blocks_either_user(
+            call.caller_id,
+            call.receiver_id,
+        ):
+            return {
+                "ok": False,
+                "error": "Calling is unavailable.",
+            }
         if call.status != "accepted":
             return {
                 "ok": False,
@@ -237,7 +255,7 @@ def register_call_media(socketio):
             "call:media:response",
             {
                 "call_id": call.id,
-                "response": response,     
+                "response": response,
             },
             room=f"user_{requester_id}",
         )

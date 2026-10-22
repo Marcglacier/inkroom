@@ -18,6 +18,9 @@ from app.models.repost import Repost
 from .pending_registration import PendingRegistration
 from app.models.pending_google_registration import PendingGoogleRegistration
 from .notification_settings import NotificationSettings
+from .settings.user_restriction import UserRestriction
+from .settings.user_block import UserBlock
+
 __all__ = [
     "User",
     "Post",
@@ -36,5 +39,7 @@ __all__ = [
     "Profile",
     "FollowRequest",
     "Repost",
-    "PendingRegistration"
+    "PendingRegistration",
+    "UserRestriction",
+    "UserBlock",
 ]

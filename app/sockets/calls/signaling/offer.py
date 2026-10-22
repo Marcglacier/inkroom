@@ -1,6 +1,6 @@
 # app/sockets/calls/signaling/offer.py
 from flask import request
-
+from app.inbox.services.settings.blocks.block_policy import BlockPolicy
 from app.sockets.calls.helpers.authenticate_socket import (
     get_authenticated_socket_user,
 )
@@ -62,6 +62,17 @@ def register_call_offer(socketio):
             return {
                 "ok": False,
                 "error": "You are not a participant in this call.",
+            }
+
+        # BLOCK CHECK
+
+        if BlockPolicy.blocks_either_user(
+            call.caller_id,
+            call.receiver_id,
+        ):
+            return {
+                "ok": False,
+                "error": "Calling is unavailable.",
             }
 
         if call.status != "accepted":

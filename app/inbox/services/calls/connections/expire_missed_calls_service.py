@@ -1,6 +1,6 @@
 # app/inbox/services/calls/expire_missed_calls_service.py
 from datetime import datetime, timedelta
-
+from app.inbox.services.settings.blocks.block_policy import BlockPolicy
 from app.extensions import db, socketio
 from app.inbox.models import Call
 from app.inbox.constants.calls import (
@@ -46,9 +46,18 @@ class ExpireMissedCallsService:
         expired_count = 0
 
         for call in calls:
+            is_blocked = BlockPolicy.blocks_either_user(
+                call.caller_id,
+                call.receiver_id,
+            )
 
             call.status = CALL_STATUS_MISSED
             call.ended_at = datetime.utcnow()
+
+            if is_blocked:
+                expired_count += 1
+                continue
+
             missed_message = create_system_message(
                 conversation_id=call.conversation_id,
                 sender_id=call.caller_id,
@@ -56,7 +65,7 @@ class ExpireMissedCallsService:
                 call_id=call.id,
                 call_type=call.call_type,
             )
-            
+
             socketio.emit(
                 "message:new",
                 MessageSerializer(missed_message).to_dict(),

@@ -8,9 +8,11 @@ from app.inbox.services.messages.message_reaction_aggregator import (
 from app.inbox.serializers.message_media_serializer import (
     MessageMediaSerializer,
 )
-
+from app.inbox.models.messages.message import Message
 from app.inbox.models.messages.message_link import MessageLink
-
+from app.inbox.services.messages.read_receipt_policy import (
+    ReadReceiptPolicy,
+)
 class MessageSerializer(SerializerMixin):
 
     def __init__(
@@ -23,6 +25,13 @@ class MessageSerializer(SerializerMixin):
 
     def to_dict(self):
         m = self.message
+        target_message = (
+            Message.query.get(m.target_message_id)
+            if m.target_message_id
+            else None
+        )
+        receipt_policy = ReadReceiptPolicy(m.conversation_id)
+        read_at = receipt_policy.read_at(m)
 
         return {
             "id": m.id,
@@ -42,23 +51,20 @@ class MessageSerializer(SerializerMixin):
                 if m.sender
                 else "deleted_user"
             ),
-            
+
             "created_at": (
                 m.created_at.isoformat() + "Z"
                 if m.created_at else None
             ),
 
-            "status": m.status,
+            "status": receipt_policy.message_status(m),
 
             "delivered_at": (
                 m.delivered_at.isoformat()
                 if m.delivered_at else None
             ),
 
-            "read_at": (
-                m.read_at.isoformat()
-                if m.read_at else None
-            ),
+            "read_at": read_at.isoformat() if read_at else None,
 
             "edited": m.edited,
 
@@ -79,6 +85,18 @@ class MessageSerializer(SerializerMixin):
             "message_type": m.message_type,
             "system_event": m.system_event,
             "target_message_id": m.target_message_id,
+            "target_message_content": (
+                target_message.content
+                if target_message else None
+            ),
+            "reaction_emoji": (
+                m.content
+                if m.system_event in {
+                    "message_reaction_added",
+                    "message_reaction_replaced",
+                }
+                else None
+            ),
             "call_id": m.call_id,
             "call_type": m.call_type,
 

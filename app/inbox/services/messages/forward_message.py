@@ -1,6 +1,6 @@
 # app/inbox/services/messages/forward_message.py
 from datetime import datetime
-
+from app.inbox.services.settings.blocks.block_policy import BlockPolicy
 from app.extensions import db, socketio
 
 from app.inbox.models.messages.message import Message
@@ -16,7 +16,9 @@ from app.inbox.services.messages.message_status import (
 )
 
 from app.inbox.serializers.message_serializer import MessageSerializer
-
+from app.inbox.services.messages.read_receipt_policy import (
+    ReadReceiptPolicy,
+)
 
 class ForwardMessageService:
 
@@ -36,11 +38,10 @@ class ForwardMessageService:
         self.status = None
         self.payload = None
 
-    # =========================================================
-    # PUBLIC
-    # =========================================================
+    # ====================== EXECUTION =========================
 
     def execute(self):
+        self._validate_block()
         self._load_original()
         self._validate_original()
         self._get_conversation()
@@ -54,10 +55,15 @@ class ForwardMessageService:
 
         return self.payload, 201
 
-    # =========================================================
-    # ORIGINAL MESSAGE
-    # =========================================================
+    #======================= VALIDATION =========================
+    def _validate_block(self):
+            if BlockPolicy.blocks_either_user(
+                self.sender_id,
+                self.to_user_id,
+            ):
+                raise ValueError("Messaging is unavailable")
 
+    #======================= ORIGINAL MESSAGE =========================
     def _load_original(self):
         self.original = Message.query.get(self.message_id)
 
@@ -78,9 +84,7 @@ class ForwardMessageService:
                 "You cannot forward this message"
             )
 
-    # =========================================================
-    # CONVERSATION
-    # =========================================================
+    #======================= CONVERSATION =========================
 
     def _get_conversation(self):
         self.conversation = ConversationService.get_or_create(
@@ -88,10 +92,7 @@ class ForwardMessageService:
             self.to_user_id,
         )
 
-    # =========================================================
-    # MESSAGE
-    # =========================================================
-
+    #======================= FORWARD MESSAGE =========================
     def _create_forwarded_message(self):
 
         self.new_message = Message(
@@ -113,9 +114,7 @@ class ForwardMessageService:
         db.session.add(self.new_message)
         db.session.flush()
 
-    # =========================================================
-    # MEDIA
-    # =========================================================
+    #======================= MEDIA =========================
 
     def _clone_media(self):
 
@@ -152,9 +151,7 @@ class ForwardMessageService:
 
         db.session.add(cloned)
 
-    # =========================================================
-    # LINKS
-    # =========================================================
+    #======================= LINKS =========================
 
     def _clone_links(self):
 
@@ -185,24 +182,14 @@ class ForwardMessageService:
 
         db.session.add(cloned)
 
-    # =========================================================
-    # DATABASE
-    # =========================================================
-
+    #======================= COMMIT =========================
     def _commit_message(self):
         db.session.commit()
 
-    # =========================================================
-    # STATUS
-    # =========================================================
-
+    #======================= STATUS =========================
     def _update_status(self):
 
-        (
-            self.status,
-            online,
-            in_chat,
-        ) = get_message_status(
+        self.status, _ = get_message_status(
             self.to_user_id,
             self.conversation.id,
             self.conversation.status,
@@ -213,9 +200,7 @@ class ForwardMessageService:
         db.session.commit()
         db.session.refresh(self.new_message)
 
-    # =========================================================
-    # SERIALIZATION
-    # =========================================================
+    # ======================= PAYLOAD =========================
 
     def _build_payload(self):
 
@@ -226,10 +211,7 @@ class ForwardMessageService:
 
         self.payload["message"] = "forwarded"
 
-    # =========================================================
-    # SOCKET
-    # =========================================================
-
+    # ======================= EVENTS =========================
     def _emit_events(self):
 
         socketio.emit(
@@ -238,37 +220,40 @@ class ForwardMessageService:
             room=f"conversation_{self.conversation.id}",
         )
 
+
         socketio.emit(
             "message:status",
             {
+                "conversation_id": self.conversation.id,
                 "message_id": self.new_message.id,
-                "status": self.status,
+                "status": ReadReceiptPolicy(
+                    self.conversation.id
+                ).message_status(self.new_message),
             },
             room=f"user_{self.sender_id}",
         )
 
 
-# =============================================================
-# PUBLIC SERVICE FUNCTION
-# =============================================================
 
+
+# ======================= FORWARD MESSAGE EVENTS =========================
 def forward_message(
     sender_id: int,
     message_id: int,
     to_user_id: int,
 ):
     try:
-
         service = ForwardMessageService(
             sender_id=sender_id,
             message_id=message_id,
             to_user_id=to_user_id,
         )
-
         return service.execute()
 
     except ValueError as exc:
-
-        return {
-            "error": str(exc)
-        }, 404
+        status_code = (
+            403
+            if str(exc) == "Messaging is unavailable"
+            else 404
+        )
+        return {"error": str(exc)}, status_code

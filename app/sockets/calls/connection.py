@@ -8,7 +8,7 @@ from app.inbox.services.calls.marks.mark_call_connection_reconnected import (
 from .helpers.authenticate_socket import (
     get_authenticated_socket_user,
 )
-
+from app.inbox.services.settings.blocks.block_policy import BlockPolicy
 
 def register_call_connection(socketio):
     def emit_connection_state(call, status):
@@ -45,6 +45,23 @@ def register_call_connection(socketio):
         except (TypeError, ValueError):
             return {"ok": False, "error": "Invalid call_id."}
 
+        call = Call.query.get(call_id)
+
+        if call is None:
+            return {"ok": False, "error": "Call not found."}
+
+        if user_id not in (call.caller_id, call.receiver_id):
+            return {"ok": False, "error": "Not authorized."}
+
+        if BlockPolicy.blocks_either_user(
+            call.caller_id,
+            call.receiver_id,
+        ):
+            return {
+                "ok": False,
+                "error": "Calling is unavailable.",
+            }
+
         MarkCallConnectionDisconnected(
             call_id=call_id,
             user_id=user_id,
@@ -76,6 +93,23 @@ def register_call_connection(socketio):
             call_id = int(call_id)
         except (TypeError, ValueError):
             return {"ok": False, "error": "Invalid call_id."}
+
+        call = Call.query.get(call_id)
+
+        if call is None:
+            return {"ok": False, "error": "Call not found."}
+
+        if user_id not in (call.caller_id, call.receiver_id):
+            return {"ok": False, "error": "Not authorized."}
+
+        if BlockPolicy.blocks_either_user(
+            call.caller_id,
+            call.receiver_id,
+        ):
+            return {
+                "ok": False,
+                "error": "Calling is unavailable.",
+            }
 
         MarkCallConnectionReconnected(
             call_id=call_id,

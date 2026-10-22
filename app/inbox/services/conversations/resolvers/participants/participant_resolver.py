@@ -2,7 +2,7 @@
 from app.inbox.models import ConversationParticipant
 from app.models.user import User
 from app.storage.service import get_file_url
-
+from app.models.settings.user_block import UserBlock
 from .participant_result import ParticipantResult
 
 
@@ -39,6 +39,27 @@ class ParticipantResolver:
         if not other:
             return None
 
+        blocked_by_other = UserBlock.query.filter_by(
+            blocker_id=other.user_id,
+            blocked_id=user_id,
+        ).first()
+
+        if blocked_by_other:
+            return ParticipantResult(
+                other_user_id=other.user_id,
+                username="deleted_user",
+                name="Deleted User",
+                avatar=None,
+                is_saved_messages=False,
+                is_deleted=False,
+                is_blocked=True,
+            )
+
+        blocked_by_viewer = UserBlock.query.filter_by(
+            blocker_id=user_id,
+            blocked_id=other.user_id,
+        ).first()
+
         user = User.query.get(other.user_id)
 
 
@@ -63,4 +84,5 @@ class ParticipantResolver:
             ),
             is_saved_messages=False,
             is_deleted=user.is_deleted,
+            is_blocker=bool(blocked_by_viewer),
         )

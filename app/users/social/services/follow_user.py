@@ -6,7 +6,7 @@ from app.models.follow_request import FollowRequest
 from app.models.user import User
 from app.models.profile import Profile
 from app.users.social.services.relationship_service import RelationshipService
-
+from app.inbox.services.settings.blocks.block_policy import BlockPolicy
 
 class FollowUserService:
     """
@@ -30,6 +30,12 @@ class FollowUserService:
 
     def execute(self) -> str:
         self._validate()
+
+        if BlockPolicy.blocks_either_user(
+            self.user_id,
+            self.target_id,
+        ):
+            return "blocked"
 
         relationship = RelationshipService(
             self.user_id,

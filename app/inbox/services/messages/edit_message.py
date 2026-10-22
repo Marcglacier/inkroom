@@ -4,7 +4,7 @@ from app.extensions import db, socketio
 from app.inbox.services.messages.message_status import (
     get_message_status,
 )
-
+from app.inbox.serializers.message_serializer import MessageSerializer
 
 def edit_message(message, new_content):
 
@@ -23,7 +23,7 @@ def edit_message(message, new_content):
     # =============================
     # RECALCULATE MESSAGE STATUS
     # =============================
-    
+
     convo = Conversation.query.get(message.conversation_id)
 
     receiver_id = next(
@@ -32,20 +32,19 @@ def edit_message(message, new_content):
         if p.user_id != message.sender_id
     )
 
-    status, _, _ = get_message_status(
-      receiver_id,
-      message.conversation_id,
-      convo.status,
-    )
-
-    message.status = status
+    if message.status != "read":
+        status, _ = get_message_status(
+            receiver_id,
+            convo.status,
+        )
+        message.status = status
 
     db.session.commit()
 
     # =============================
     # BUILD SOCKET PAYLOAD
     # =============================
-    payload = message.to_dict()
+    payload = MessageSerializer(message).to_dict()
 
     payload["created_at"] = (
         message.created_at.isoformat() + "Z"
@@ -66,8 +65,9 @@ def edit_message(message, new_content):
     socketio.emit(
         "message:status",
         {
+            "conversation_id": message.conversation_id,
             "message_id": message.id,
-            "status": status,
+            "status": MessageSerializer(message).to_dict()["status"],
         },
         room=f"user_{message.sender_id}",
     )

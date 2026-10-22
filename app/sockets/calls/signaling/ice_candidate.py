@@ -9,7 +9,7 @@ from app.sockets.calls.helpers.resolve_participant import (
     get_other_participant_id,
     get_user_socket_ids,
 )
-
+from app.inbox.services.settings.blocks.block_policy import BlockPolicy
 
 def register_call_ice_candidate(socketio):
 
@@ -59,6 +59,17 @@ def register_call_ice_candidate(socketio):
             return {
                 "ok": False,
                 "error": "You are not a participant in this call.",
+            }
+
+        # BLOCK CHECK
+
+        if BlockPolicy.blocks_either_user(
+            call.caller_id,
+            call.receiver_id,
+        ):
+            return {
+                "ok": False,
+                "error": "Calling is unavailable.",
             }
 
         if call.status != "accepted":

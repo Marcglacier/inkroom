@@ -5,10 +5,9 @@ from app.inbox.models import Conversation, ConversationParticipant
 from app.inbox.services.conversations.core.conversation_builder import ConversationCardBuilder
 from app.inbox.models.conversations.conversation_hide import ConversationHide
 from app.inbox.models.conversations.conversation_archive import ( ConversationArchive, )
+from app.models.settings.user_restriction import UserRestriction
 
 def get_inbox(user_id):
-    print("🔥🔥🔥 GET_INBOX CALLED 🔥🔥🔥")
-    print("\n========== GET INBOX ==========\nUSER:", user_id)
 
     convo_ids = [
         c[0]
@@ -24,35 +23,51 @@ def get_inbox(user_id):
     results = []
 
     for convo_id in convo_ids:
-        print("\n--------------------")
-        print("CHECKING CONVO:", convo_id)
+
+
 
         convo = Conversation.query.get(convo_id)
         if not convo:
-            print("❌ CONVO NOT FOUND")
             continue
+        # Restricted chats leave this user's normal inbox.
+        # The other participant's inbox remains unchanged.
+        if convo.status == "active":
+            participants = ConversationParticipant.query.filter_by(
+                conversation_id=convo_id
+            ).all()
 
+            other_user_ids = [
+                participant.user_id
+                for participant in participants
+                if participant.user_id is not None
+                and participant.user_id != user_id
+            ]
+
+            if len(other_user_ids) == 1:
+                restricted = UserRestriction.query.filter_by(
+                    restricter_id=user_id,
+                    restricted_id=other_user_ids[0],
+                ).first()
+
+                if restricted:
+                    continue
         # check hidden before building card
         hidden = ConversationHide.query.filter_by(
             conversation_id=convo_id, user_id=user_id
         ).first()
         if hidden:
-            print("🙈 Conversation hidden")
             continue
-        print("STATUS:", convo.status)
 
         archived = ConversationArchive.query.filter_by(
             conversation_id=convo_id, user_id=user_id,).first()
 
         if archived:
-            print("📦 Conversation archived")
-            continue     
+            continue
 
         card = ConversationCardBuilder(convo, user_id).build()
         if not card:
             continue
-      
-        print("✅ ADDING TO INBOX:", convo.id)
+
         results.append(card)
 
     # sort once, after building
@@ -64,5 +79,5 @@ def get_inbox(user_id):
         ),
         reverse=True,
     )
-    print("TOTAL INBOX ITEMS:", len(results), "\n================================\n")
+
     return results

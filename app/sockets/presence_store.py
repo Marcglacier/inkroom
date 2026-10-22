@@ -1,8 +1,6 @@
 from datetime import datetime, timezone
 import threading
-from app.inbox.services.presence.presence_events import (
-    emit_presence_status
-)
+
 
 online_users: dict[int, bool] = {}
 last_seen: dict[int, str] = {}
@@ -74,4 +72,4 @@ def set_offline_later(sid: str, callback, delay: int = 20) -> None:
 
 def has_other_connections(user_id: int, sid: str) -> bool:
     sockets = user_connections.get(user_id, set())
-    return any(socket_id != sid for socket_id in sockets)    
+    return any(socket_id != sid for socket_id in sockets)

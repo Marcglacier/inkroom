@@ -6,6 +6,7 @@ from app.inbox.models.messages.message import Message
 from app.inbox.models.conversations.conversation import Conversation
 from app.inbox.services.messages.create_system_message import create_system_message
 from app.inbox.serializers.message_serializer import MessageSerializer
+from app.inbox.services.settings.blocks.block_policy import BlockPolicy
 
 def pin_message(user_id, message_id):
 
@@ -20,14 +21,17 @@ def pin_message(user_id, message_id):
 
     if already:
         return {"error": "already pinned"}, 400
-    
+
     convo = Conversation.query.get(msg.conversation_id)
     if not convo:
         return {"error": "Conversation not found"}, 404
 
     if user_id not in [p.user_id for p in convo.participants]:
         return {"error": "Forbidden"}, 403
-    
+
+    if BlockPolicy.blocks_either_user(user_id, msg.sender_id):
+        return {"error": "Pinning is unavailable"}, 403
+
     pin_count = PinnedMessage.query.filter_by(
         conversation_id=msg.conversation_id
     ).count()

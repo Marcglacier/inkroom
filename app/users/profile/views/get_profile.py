@@ -12,28 +12,12 @@ class GetProfileAPI(MethodView):
     @jwt_required()
     def get(self, user_id):
 
-        print("\n============================")
-        print("🔥 GetProfileAPI HIT")
-        print("============================")
 
         # ✅ AUTH USER
         viewer_id = int(get_jwt_identity())
 
-        print("👤 VIEWER ID:", viewer_id)
-        print("🎯 TARGET USER ID:", user_id)
-
         # ✅ FETCH PROFILE
         profile_data = get_profile(viewer_id, user_id)
-
-        print("\n📦 PROFILE RESPONSE:")
-        print(profile_data)
-
-        # ✅ IMPORTANT DEBUGS
-        print("\n🧠 DEBUG VALUES")
-        print("📅 JOINED AT:", profile_data.get("joined_at"))
-        print("🔗 SOCIAL LINKS:", profile_data.get("social_links"))
-        print("📝 BIO:", profile_data.get("bio"))
-        print("🔒 IS PRIVATE:", profile_data.get("is_private"))
 
         # detect empty values
         if not profile_data.get("social_links"):
@@ -45,6 +29,5 @@ class GetProfileAPI(MethodView):
         if profile_data.get("social_links") == []:
             print("⚠️ SOCIAL LINKS IS EMPTY ARRAY")
 
-        print("============================\n")
 
         return jsonify(profile_data)

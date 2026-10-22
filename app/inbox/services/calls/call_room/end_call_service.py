@@ -1,4 +1,4 @@
-# app/inbox/services/calls/end_call_service.py
+# app/inbox/services/calls/call_room/end_call_service.py
 
 from datetime import datetime
 
@@ -78,7 +78,7 @@ class EndCallService:
         call.ended_at = datetime.utcnow()
 
         duration_seconds = 0
-        
+
         if call.started_at:
             duration_seconds = max(
                 0,
@@ -105,7 +105,7 @@ class EndCallService:
             room=f"conversation_{call.conversation_id}",
         )
         media_switch_state.clear(call.id)
-        
+
         call_connection_state.clear(call.id)
 
         # ========================================================

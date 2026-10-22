@@ -1,77 +1,94 @@
-from app.extensions import db
-from app.inbox.models import Message
-from app.inbox.services.conversations.core.conversation_events import ( emit_conversation_updated, )
 from app.extensions import db, socketio
-from app.inbox.services.conversations.core.conversation_guard import ( ConversationGuard, )
+from app.inbox.models import Message
+from app.inbox.services.conversations.core.conversation_events import (
+    emit_conversation_updated,
+)
+from app.inbox.services.conversations.core.conversation_guard import (
+    ConversationGuard,
+)
+from app.inbox.services.messages.read_receipt_policy import (
+    ReadReceiptPolicy,
+)
 
-def mark_conversation_read(conversation_id, user_id):
+class MarkConversationReadService:
 
-    participant = ConversationGuard.require_participant(
-        conversation_id, user_id,
-    )
+    def execute(
+        self,
+        conversation_id: int,
+        user_id: int,
+        through_message_id: int,
+    ) -> int | None:
 
-    # mark messages as read
-    messages = (
+        participant = ConversationGuard.require_participant(
+            conversation_id,
+            user_id,
+        )
+
+        messages = (
+            Message.query
+            .filter(
+                Message.conversation_id == conversation_id,
+                Message.sender_id != user_id,
+                Message.id <= through_message_id,
+                Message.read_at.is_(None),
+            )
+            .all()
+        )
+
+        if not messages:
+            return participant.last_read_message_id
+
         Message.query.filter(
             Message.conversation_id == conversation_id,
             Message.sender_id != user_id,
+            Message.id <= through_message_id,
             Message.read_at.is_(None),
-        ).all()
-    )
-    Message.query.filter(
-        Message.conversation_id == conversation_id,
-        Message.sender_id != user_id,
-        Message.read_at.is_(None),
-    ).update(
-        {
-            "read_at": db.func.now(),
-            "status": "read",
-        },
-        synchronize_session=False
-    )
-
-
-    # update last read pointer
-    
-    print("========== MARK READ ==========")
-    print("conversation:", conversation_id)
-    print("user:", user_id)
-    print( "BEFORE:", participant.last_read_message_id)
-       
-    last_message = (
-        Message.query
-        .filter_by(conversation_id=conversation_id)
-        .order_by(Message.id.desc())
-        .first()
-    )
-
-
-    if participant and last_message:
-        participant.last_read_message_id = last_message.id
-        print("AFTER:", participant.last_read_message_id)
-
-
-    db.session.commit()
-    print("COMMITTING LAST READ", participant.last_read_message_id)
-    for message in messages:
-        socketio.emit(
-            "message:status",
+        ).update(
             {
-                "conversation_id": conversation_id,
-                "message_id": message.id,
+                "read_at": db.func.now(),
                 "status": "read",
             },
-            room=f"conversation_{conversation_id}",
+            synchronize_session=False,
         )
-    last_read_id = participant.last_read_message_id if participant else None
 
-    socketio.emit(
-         "conversation:read",
-             {
+        highest_read = max(message.id for message in messages)
+
+        if (
+            participant.last_read_message_id is None
+            or highest_read > participant.last_read_message_id
+        ):
+            participant.last_read_message_id = highest_read
+
+        db.session.commit()
+
+        receipt_visible = ReadReceiptPolicy(
+            conversation_id
+        ).visible
+
+        if receipt_visible:
+            for message in messages:
+                socketio.emit(
+                    "message:status",
+                    {
+                        "conversation_id": conversation_id,
+                        "message_id": message.id,
+                        "status": "read",
+                    },
+                    room=f"conversation_{conversation_id}",
+                )
+
+        socketio.emit(
+            "conversation:read",
+            {
                 "conversation_id": conversation_id,
                 "user_id": user_id,
-                "last_read_message_id": last_read_id,
+                "last_read_message_id": (
+                    participant.last_read_message_id
+                ),
             },
-             room=f"user_{user_id}",
+            room=f"user_{user_id}",
         )
-    emit_conversation_updated(conversation_id)
+
+        emit_conversation_updated(conversation_id)
+
+        return participant.last_read_message_id

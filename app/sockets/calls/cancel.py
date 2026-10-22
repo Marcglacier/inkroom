@@ -72,6 +72,11 @@ def register_call_cancel(socketio):
                 "error": "Call not found.",
             }
 
+        if user_id not in (call.caller_id, call.receiver_id):
+            return {
+                "ok": False,
+                "error": "Not authorized.",
+            }
         # ========================================================
         # CANCEL
         # ========================================================

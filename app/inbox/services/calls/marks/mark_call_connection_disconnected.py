@@ -3,7 +3,7 @@ from app.inbox.models import Call
 from app.inbox.services.calls.connections.call_connection_state import (
     call_connection_state,
 )
-
+from app.inbox.services.settings.blocks.block_policy import BlockPolicy
 
 class MarkCallConnectionDisconnected:
     def __init__(
@@ -21,6 +21,12 @@ class MarkCallConnectionDisconnected:
             return
 
         if self.user_id not in (
+            call.caller_id,
+            call.receiver_id,
+        ):
+            return
+
+        if BlockPolicy.blocks_either_user(
             call.caller_id,
             call.receiver_id,
         ):

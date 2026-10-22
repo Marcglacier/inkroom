@@ -32,19 +32,22 @@ class GetArchivedConversationsService:
             card = ConversationCardBuilder(
                 conversation,
                 self.user_id,
-            ).build()   
+            ).build()
 
             if card:
                 results.append(card)
 
+
         results.sort(
             key=lambda c: (
+                c["is_pinned"],
                 c["last_message"]["created_at"]
                 if c["last_message"]
-                else ""
+                else "",
             ),
             reverse=True,
         )
+
 
         return results
 
@@ -79,7 +82,7 @@ class GetArchivedConversationsService:
             .first()
         )
 
-        return archive is not None  
+        return archive is not None
     def _is_hidden(
         self,  conversation_id: int, ):
 
@@ -92,4 +95,4 @@ class GetArchivedConversationsService:
             .first()
         )
 
-        return hidden is not None      
+        return hidden is not None

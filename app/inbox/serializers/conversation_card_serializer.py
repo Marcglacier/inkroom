@@ -34,7 +34,7 @@ class ConversationCardSerializer(SerializerMixin):
             "name": self.participant.name,
             "avatar": self.participant.avatar,
             "is_deleted": self.participant.is_deleted,
-
+            "is_blocker": self.participant.is_blocker,
             "unread": self.unread,
 
             "is_pinned": self.is_pinned,

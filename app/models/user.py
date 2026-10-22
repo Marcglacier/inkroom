@@ -50,6 +50,8 @@ class User(db.Model):
     last_seen = db.Column(db.DateTime, default=datetime.utcnow)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     is_deleted = db.Column(db.Boolean, default=False, nullable=False)
+    show_online_status = db.Column( db.Boolean, nullable=False, default=True,)
+    show_read_receipts = db.Column( db.Boolean, nullable=False, default=True, )
 
     # ================= RELATIONSHIPS =================
     messages_sent = db.relationship(

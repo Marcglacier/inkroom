@@ -1,14 +1,10 @@
-from app.extensions import db
 from flask.views import MethodView
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from flask import request
 import time
 from app.inbox.models import (
-    Conversation,
     ConversationClear,
     ConversationParticipant, Message )
-from flask import abort
-from app.inbox.services.conversations.lifecycle.mark_conversation_read import mark_conversation_read
 from app.inbox.services.conversations.lifecycle.mark_delivered import mark_messages_delivered
 from app.models.user import User
 from app.inbox.services.messages.fetch_messages import fetch_messages
@@ -16,8 +12,13 @@ from app.inbox.services.messages.fetch_pinned_messages import fetch_pinned
 from app.storage.service import get_file_url
 from app.inbox.services.unread.marker  import get_session_unread_marker
 from app.inbox.services.conversations.core.conversation_guard import ( ConversationGuard, )
+from app.inbox.services.conversations.resolvers.last_message.unread.unread_count_resolver import (
+    UnreadCountResolver,
+)
+from app.models.settings.user_block import UserBlock
 
 def build_payload( m ):
+
     payload = {
         "id": m["id"],
         "content": m["content"],
@@ -66,22 +67,9 @@ class ConversationMessagesAPI(MethodView):
         conversation = my_participant.conversation
 
         checkpoint("my_participant")
-        print( "DB VALUE BEFORE ANYTHING:", my_participant.last_read_message_id,)
-        print("🔥 DB LAST READ:", my_participant.last_read_message_id)
-        
 
         previous_last_read = get_session_unread_marker(my_participant)
-        
-        print("🔥 SESSION MARKER:", previous_last_read)
-        last_message = (
-            Message.query
-            .filter_by(conversation_id=conversation_id)
-            .order_by(Message.id.desc())
-            .first() 
-            )
-        checkpoint("last_message")
-        print("DB LAST MESSAGE:", last_message.id if last_message else None)
-        
+
         # Other participant
         part = (
             ConversationParticipant.query
@@ -89,18 +77,56 @@ class ConversationMessagesAPI(MethodView):
             .filter(ConversationParticipant.user_id != uid)
             .first()
         )
+
+        blocked_by_me = False
+
+        if part and part.user_id is not None:
+            blocked_by_me = UserBlock.query.filter_by(
+                blocker_id=uid,
+                blocked_id=part.user_id,
+            ).first() is not None
+
         chamber_user = None
-        if part:
-            u = User.query.get(part.user_id)
-            chamber_user = {
-                "id": u.id,
-                "name": u.name,
-                "username": u.username,
-                "avatar":(get_file_url(u.profile_picture) if u.profile_picture else None),
-            }
+
+        if part and part.user_id is not None:
+            other_user_id = part.user_id
+            u = User.query.get(other_user_id)
+
+            # Hide the blocker's identity from the person they blocked.
+            blocked_viewer = UserBlock.query.filter_by(
+                blocker_id=other_user_id,
+                blocked_id=uid,
+            ).first() is not None
+
+            if blocked_viewer:
+                chamber_user = {
+                    "id": other_user_id,
+                    "name": "Deleted Account",
+                    "username": "deleted_account",
+                    "avatar": None,
+                    "is_deleted": True,
+                }
+            elif u:
+                chamber_user = {
+                    "id": u.id,
+                    "name": "Deleted Account" if u.is_deleted else u.name,
+                    "username": "deleted_account" if u.is_deleted else u.username,
+                    "avatar": (
+                        None
+                        if u.is_deleted
+                        else (
+                            get_file_url(u.profile_picture)
+                            if u.profile_picture
+                            else None
+                        )
+                    ),
+                    "is_deleted": u.is_deleted,
+                }
+
         checkpoint("other_participant")
 
-       
+
+
         # Cleared chats
         clear = ConversationClear.query.filter_by(conversation_id=conversation_id, user_id=uid).first()
         cleared_at = clear.cleared_at if clear else None
@@ -125,29 +151,20 @@ class ConversationMessagesAPI(MethodView):
         t = time.perf_counter()
         mark_messages_delivered( conversation_id, uid)
         print("mark_delivered:", time.perf_counter() - t)
-        
-        # Read receits
-        print("========== BEFORE MARK READ ==========")
-        print("previous_last_read:", previous_last_read)
-        print("db participant:", my_participant.last_read_message_id)
-        mark_conversation_read(conversation_id, uid)
-        db.session.refresh(my_participant)
-        print("========== AFTER MARK READ ==========")
-        print("db participant:", my_participant.last_read_message_id)
-        current_last_read = my_participant.last_read_message_id
-        
-        print("========== RETURN ==========")
-        print("previous_last_read:", previous_last_read)
-        print( "response value:", previous_last_read)
-        print("TOTAL:", time.perf_counter() - request_start)
+
+        unread_count = UnreadCountResolver.get(
+            conversation_id,
+            uid,
+        )
 
         payload = {
             "conversation": {
                 "id": conversation_id,
                 "status": conversation.status,
+                "blocked_by_me": blocked_by_me,
                 "user": chamber_user,
-                "last_read_message_id": current_last_read,
-                "previous_last_read_message_id": previous_last_read,
+                "last_read_message_id": my_participant.last_read_message_id,
+                "unread_count": unread_count,
             },
             "page": page,
             "limit": limit,

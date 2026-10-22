@@ -4,7 +4,9 @@ from app.inbox.models.messages.message import Message
 from app.models.user import User
 from app.inbox.services.messages.message_reaction_aggregator import build_reactions
 from app.inbox.serializers.message_media_serializer import MessageMediaSerializer
-
+from app.inbox.services.messages.read_receipt_policy import (
+    ReadReceiptPolicy,
+)
 
 class FetchMessageContextService:
     def __init__(
@@ -51,6 +53,7 @@ class FetchMessageContextService:
         return self._serialize(messages)
 
     def _serialize(self, messages):
+        receipt_policy = ReadReceiptPolicy(self.conversation_id)
         message_cache = {} ; user_cache = {} ; serialized = []
         for message in messages:
 
@@ -84,18 +87,21 @@ class FetchMessageContextService:
             "message_type": message.message_type, "system_event": message.system_event,
             "target_message_id": message.target_message_id, "media": media, "sender_id": message.sender_id,
             "sender_username": sender_username, "sender_name": sender_name, "created_at": message.created_at,
-            "edited": message.edited, "status": message.status, "delivered_at": message.delivered_at,
-            "read_at": message.read_at, "is_sender": ( message.sender_id == self.user_id ), "is_forwarded": message.is_forwarded,
+            "edited": message.edited,
+            "status": receipt_policy.message_status(message),
+            "delivered_at": message.delivered_at,
+            "read_at": receipt_policy.read_at(message),
+            "is_sender": ( message.sender_id == self.user_id ), "is_forwarded": message.is_forwarded,
             "forwarded_from_id": message.forwarded_from_id, "deleted_for_everyone": ( message.deleted_for_everyone ),
             "reply_to": reply_data, "reactions": reactions,  })
-            
+
         return serialized
 
     def _get_user(self, user_cache, user_id):
       if user_id not in user_cache:
             user_cache[user_id] = User.query.get(user_id)
 
-      return user_cache[user_id]    
+      return user_cache[user_id]
 
     def _get_message(self, message_cache, message_id):
       if message_id not in message_cache:

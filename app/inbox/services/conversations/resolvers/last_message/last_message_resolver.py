@@ -1,5 +1,5 @@
-# app/inbox/services/conversations/resolvers/last_message_resolver.py
-from sqlalchemy import cast 
+# app/inbox/services/conversations/resolvers/last_message/last_message_resolver.py
+from sqlalchemy import cast
 from sqlalchemy.dialects.postgresql import JSONB
 from app.inbox.services.conversations.resolvers.clears.ConversationClearResolver import (
     ConversationClearResolver,
@@ -31,9 +31,9 @@ class LastMessageResolver:
         query = clear.apply(query)
 
         last_message = (
-            query.order_by(
-                Message.created_at.desc()
-            ).first()
+            query
+            .order_by(Message.created_at.desc())
+            .first()
         )
 
         return LastMessageResult(

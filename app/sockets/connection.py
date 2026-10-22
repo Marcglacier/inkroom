@@ -8,14 +8,18 @@ from app.sockets.messaging import active_chambers, sid_to_user
 from app.extensions import db
 from app.inbox.models.messages.message import Message
 from app.inbox.models.conversations.conversation_participant import ConversationParticipant
-from app.inbox.services.presence.presence_events import (emit_presence_status,)
 from app.inbox.services.calls.marks.mark_user_calls_disconnected import (
     MarkUserCallsDisconnected,
 )
 from app.inbox.services.calls.marks.mark_user_calls_reconnected import (
     MarkUserCallsReconnected,
 )
-
+from .presence_store import user_sockets
+from app.inbox.services.presence.presence_events import (
+    emit_presence_status,
+    presence_payload,
+)
+from app.inbox.services.settings.blocks.block_policy import BlockPolicy
 
 def register_connection_events(socketio):
 
@@ -44,16 +48,20 @@ def register_connection_events(socketio):
 
             print("📦 SENT MESSAGES FOUND:", len(messages))
             for msg in messages:
+                if BlockPolicy.blocks_either_user(
+                    user_id,
+                    msg.sender_id,
+                ):
+                    continue
+
                 msg.status = "delivered"
                 socketio.emit("message:status", {"message_id": msg.id, "status": "delivered"}, room=f"user_{msg.sender_id}")
-                print("📦 DELIVERED:", msg.id)
             db.session.commit()
 
             # Join rooms
             join_room(f"user_{user_id}")
             join_room("global_feed")
 
-            print("🟢 CONNECT ONLINE:", user_id, "ONLINE:", online_users)
 
             # Emit presence updates
             emit_presence_status(
@@ -61,10 +69,12 @@ def register_connection_events(socketio):
                 online=True,)
 
             print("📦 SENDING ONLINE SNAPSHOT")
-            for uid, status in online_users.items():
-                emit("presence:status", {"user_id": uid, "online": status, "last_seen": last_seen.get(uid)})
+            for uid in list(online_users):
+                emit(
+                    "presence:status",
+                    presence_payload(user_id, uid),
+                )
 
-            print("✅ CONNECT COMPLETE")
             return True
 
         except Exception as e:
@@ -73,9 +83,16 @@ def register_connection_events(socketio):
 
     @socketio.on("presence:request")
     def presence_request():
-        print("📡 PRESENCE SNAPSHOT REQUEST")
-        for uid, status in online_users.items():
-            emit("presence:status", {"user_id": uid, "online": status, "last_seen": last_seen.get(uid)})
+        viewer_id = user_sockets.get(request.sid)
+
+        if viewer_id is None:
+            return
+
+        for uid in list(online_users):
+            emit(
+                "presence:status",
+                presence_payload(viewer_id, uid),
+            )
 
     @socketio.on("disconnect")
     def handle_disconnect():

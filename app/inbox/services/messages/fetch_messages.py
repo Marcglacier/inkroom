@@ -1,12 +1,15 @@
 # app/inbox/services/messages/fetch_messages.py
 
 import time
-
 from app.inbox.models.messages.message import Message
 from app.models.user import User
+from app.models.settings.user_block import UserBlock
 from app.inbox.services.messages.message_reaction_aggregator import build_reactions
 from app.inbox.serializers.message_media_serializer import MessageMediaSerializer
 from app.inbox.models.conversations.conversation_clear import ConversationClear
+from app.inbox.services.messages.read_receipt_policy import (
+    ReadReceiptPolicy,
+)
 
 def fetch_messages(
     conversation_id,
@@ -70,17 +73,54 @@ def fetch_messages(
     # The UI wants oldest -> newest.
     db_messages.reverse()
 
+    receipt_policy = ReadReceiptPolicy(conversation_id)
+
     messages = []
+
 
     message_cache = {}
     user_cache = {}
+    identity_cache = {}
 
     def get_user(user_id):
         if user_id not in user_cache:
-            user_cache[user_id] = User.query.get(user_id)
+            user_cache[user_id] = (
+                User.query.get(user_id)
+                if user_id is not None
+                else None
+            )
 
         return user_cache[user_id]
 
+    def get_display_identity(user_id):
+        if user_id not in identity_cache:
+            user = get_user(user_id)
+
+            hidden = (
+                user_id is not None
+                and UserBlock.query.filter_by(
+                    blocker_id=user_id,
+                    blocked_id=current_user_id,
+                ).first() is not None
+            )
+
+            if hidden:
+                identity_cache[user_id] = (
+                    "Deleted Account",
+                    "deleted_account",
+                )
+            elif user:
+                identity_cache[user_id] = (
+                    user.name or "Deleted User",
+                    user.username or "deleted_user",
+                )
+            else:
+                identity_cache[user_id] = (
+                    "Deleted User",
+                    "deleted_user",
+                )
+
+        return identity_cache[user_id]
     def get_message(msg_id):
         if msg_id not in message_cache:
             message_cache[msg_id] = Message.query.get(msg_id)
@@ -96,13 +136,8 @@ def fetch_messages(
         if current_user_id in (message.deleted_for_users or []):
             continue
 
-        sender = get_user(message.sender_id)
-
-        sender_username = ( sender.username if sender else "deleted_user" )
-
-        sender_name = (
-            sender.name
-            if sender else "Deleted User"
+        sender_name, sender_username = get_display_identity(
+            message.sender_id
         )
 
         # -----------------------------------------------------
@@ -120,7 +155,7 @@ def fetch_messages(
                 replied_msg
                 and not replied_msg.deleted_for_everyone
             ):
-                reply_sender = get_user(
+                reply_name, reply_username = get_display_identity(
                     replied_msg.sender_id
                 )
 
@@ -128,16 +163,8 @@ def fetch_messages(
                     "id": replied_msg.id,
                     "content": replied_msg.content,
                     "sender_id": replied_msg.sender_id,
-                    "sender_name": (
-                        reply_sender.name
-                        if reply_sender
-                        else "Deleted User"
-                    ),
-                    "sender_username": (
-                        reply_sender.username
-                        if reply_sender
-                        else "deleted_user"
-                    ),
+                    "sender_name": reply_name,
+                    "sender_username": reply_username,
                 }
 
         # -----------------------------------------------------
@@ -172,9 +199,9 @@ def fetch_messages(
 
             "edited": message.edited,
 
-            "status": message.status,
+            "status": receipt_policy.message_status(message),
             "delivered_at": message.delivered_at,
-            "read_at": message.read_at,
+            "read_at": receipt_policy.read_at(message),
 
             "is_sender": (
                 message.sender_id == current_user_id

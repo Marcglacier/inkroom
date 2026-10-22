@@ -3,7 +3,7 @@
 from datetime import datetime
 
 from flask import abort
-
+from app.inbox.services.settings.blocks.block_policy import BlockPolicy
 from app.extensions import db, socketio
 from app.inbox.models import Call
 from app.inbox.constants.calls import (
@@ -51,6 +51,16 @@ class CancelCallService:
             abort(
                 403,
                 description="Only the caller can cancel this call.",
+            )
+        # BLOCK CHECK
+
+        if BlockPolicy.blocks_either_user(
+            call.caller_id,
+            call.receiver_id,
+        ):
+            abort(
+                403,
+                description="Calling is unavailable.",
             )
 
         if call.status not in (

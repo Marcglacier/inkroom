@@ -10,3 +10,5 @@ class ParticipantResult:
     avatar: str | None
     is_saved_messages: bool
     is_deleted: bool = False
+    is_blocked: bool = False
+    is_blocker: bool = False

@@ -2,7 +2,7 @@
 from app.extensions import db
 from app.models.follow import Follow
 from app.models.follow_request import FollowRequest
-
+from app.inbox.services.settings.blocks.block_policy import BlockPolicy
 
 class AcceptFollowService:
     """
@@ -22,6 +22,11 @@ class AcceptFollowService:
         self.requester_id = requester_id
 
     def execute(self) -> str:
+        if BlockPolicy.blocks_either_user(
+            self.user_id,
+            self.requester_id,
+        ):
+            return "blocked"
 
         request = (
             FollowRequest.query

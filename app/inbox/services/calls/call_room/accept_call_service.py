@@ -1,9 +1,9 @@
-# app/inbox/services/calls/accept_call_service.py
+# app/inbox/services/calls/call_room/accept_call_service.py
 
 from datetime import datetime
 
 from flask import abort
-
+from app.inbox.services.settings.blocks.block_policy import BlockPolicy
 from app.extensions import db
 from app.inbox.models import Call
 from app.inbox.constants.calls import (
@@ -60,6 +60,16 @@ class AcceptCallService:
                 description="Only the call recipient can accept this call.",
             )
 
+        # BLOCK CHECK
+
+        if BlockPolicy.blocks_either_user(
+            call.caller_id,
+            call.receiver_id,
+        ):
+            abort(
+                403,
+                description="Calling is unavailable.",
+            )
         # ========================================================
         # VALIDATE CURRENT STATE
         # ========================================================

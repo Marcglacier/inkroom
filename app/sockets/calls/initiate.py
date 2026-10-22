@@ -1,7 +1,7 @@
 # app/sockets/calls/initiate.py
 
 from flask import request
-
+from app.inbox.services.settings.blocks.block_policy import BlockPolicy
 from app.extensions import db
 from app.models.user import User
 from app.inbox.services.calls.marks.mark_call_ringing_service import (
@@ -9,7 +9,7 @@ from app.inbox.services.calls.marks.mark_call_ringing_service import (
 )
 
 from .helpers import (
-    get_authenticated_socket_user, resolve_call, 
+    get_authenticated_socket_user, resolve_call,
     get_user_socket_ids, build_call_payload
 )
 
@@ -110,7 +110,16 @@ def register_call_initiate(socketio):
                 "ok": False,
                 "error": "You cannot initiate this call.",
             }
+        # BLOCK CHECK
 
+        if BlockPolicy.blocks_either_user(
+            call.caller_id,
+            call.receiver_id,
+        ):
+            return {
+                "ok": False,
+                "error": "Calling is unavailable.",
+            }
         # ========================================================
         # RECEIVER
         # ========================================================

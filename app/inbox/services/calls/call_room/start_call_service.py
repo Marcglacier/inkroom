@@ -1,7 +1,7 @@
-# app/inbox/services/calls/start_call_service.py
+# app/inbox/services/calls/call_room/start_call_service.py
 
 from flask import abort
-
+from app.inbox.services.settings.blocks.block_policy import BlockPolicy
 from app.extensions import db
 from app.inbox.models import Call
 from app.inbox.constants.calls import (
@@ -33,8 +33,8 @@ class StartCallService:
 
     def execute(self) -> Call:
 
-        # INPUT VALIDATION 
-           
+        # INPUT VALIDATION
+
         if self.conversation_id is None:
             abort(
                 400,
@@ -45,7 +45,7 @@ class StartCallService:
             abort(
                 400,
                 description="call_type is required.",
-            )   
+            )
 
         # ACCESS
 
@@ -75,6 +75,17 @@ class StartCallService:
             abort(
                 400,
                 description="Conversation has no other participant.",
+            )
+
+        # BLOCK CHECK
+
+        if BlockPolicy.blocks_either_user(
+            self.user_id,
+            receiver.id,
+        ):
+            abort(
+                403,
+                description="Calling is unavailable.",
             )
 
         # CHECK ACTIVE CALL

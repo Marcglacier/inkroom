@@ -1,7 +1,7 @@
 # app/inbox/services/conversations/core/conversation_builder.py
 from app.inbox.services.conversations.mutes.mute_guard import (  MuteGuard, )
 from app.inbox.services.conversations.resolvers.last_message.last_message_resolver import (
-    LastMessageResolver, 
+    LastMessageResolver,
 )
 from app.inbox.services.conversations.resolvers.clears.ConversationClearResolver import (
     ConversationClearResolver,
@@ -30,7 +30,6 @@ class ConversationCardBuilder:
         self.user_id = user_id
 
     def build(self):
-        print("🔥🔥🔥 GET_INBOX CALLED 🔥🔥🔥")
 
         if not ConversationVisibilityGuard.should_show(
             self.conversation,
@@ -69,9 +68,11 @@ class ConversationCardBuilder:
         )
 
         last_msg = result.last_message
+        if participant.is_blocked:
+            last_msg = None
 
         if not last_msg:
-            if clear.was_cleared:
+            if clear.was_cleared or participant.is_blocked:
                 return ConversationCardSerializer(
                     conversation=self.conversation,
                     participant=participant,

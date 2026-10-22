@@ -2,7 +2,7 @@
 from app.extensions import db
 from app.models.follow import Follow
 from app.models.follow_request import FollowRequest
-
+from app.inbox.services.settings.blocks.block_policy import BlockPolicy
 
 class ConvertRequestsToFollowService:
     """
@@ -33,6 +33,12 @@ class ConvertRequestsToFollowService:
         converted = 0
 
         for request in pending_requests:
+            if BlockPolicy.blocks_either_user(
+                request.requester_id,
+                self.user_id,
+            ):
+                db.session.delete(request)
+                continue
 
             existing_follow = (
                 Follow.query

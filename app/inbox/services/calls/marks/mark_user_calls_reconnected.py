@@ -2,7 +2,8 @@
 from app.inbox.services.calls.connections.call_connection_state import (
     call_connection_state,
 )
-
+from app.inbox.models import Call
+from app.inbox.services.settings.blocks.block_policy import BlockPolicy
 
 class MarkUserCallsReconnected:
 
@@ -18,6 +19,17 @@ class MarkUserCallsReconnected:
             call_connection_state.disconnected_calls()
         ):
             if user_id != self.user_id:
+                continue
+
+            call = Call.query.get(call_id)
+
+            if call is None:
+                continue
+
+            if BlockPolicy.blocks_either_user(
+                call.caller_id,
+                call.receiver_id,
+            ):
                 continue
 
             call_connection_state.mark_reconnected(

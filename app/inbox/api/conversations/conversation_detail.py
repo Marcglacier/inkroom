@@ -1,6 +1,6 @@
 from flask.views import MethodView
 from flask_jwt_extended import jwt_required, get_jwt_identity
-
+from ....models import UserBlock
 from app.inbox.services.conversations.core.conversation_guard import (
     ConversationGuard,
 )
@@ -77,6 +77,22 @@ class ConversationDetailAPI(MethodView):
                 "username": None,
                 "avatar": None,
                 "deleted": True,
+            }, 200
+
+        #================= Blocked user ====================
+        blocked_by_other = UserBlock.query.filter_by(
+            blocker_id=participant.user_id,
+            blocked_id=user_id,
+        ).first()
+
+        if blocked_by_other:
+            return {
+                "id": participant.user_id,
+                "name": "Deleted User",
+                "username": None,
+                "avatar": None,
+                "deleted": True,
+                "is_deleted": True,
             }, 200
 
         # -------------------------------------------------

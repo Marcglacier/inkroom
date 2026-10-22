@@ -2,7 +2,7 @@
 
 from app.models.follow import Follow
 from app.models.follow_request import FollowRequest
-
+from app.inbox.services.settings.blocks.block_policy import BlockPolicy
 
 class RelationshipService:
     """
@@ -24,6 +24,20 @@ class RelationshipService:
         self.target_id = target_id
 
     def get(self) -> dict:
+        if BlockPolicy.blocks_either_user(
+            self.viewer_id,
+            self.target_id,
+        ):
+            return {
+                "following": False,
+                "followed_by": False,
+                "is_mutual": False,
+                "request_sent": False,
+                "request_received": False,
+                "state": "blocked",
+                "blocked": True,
+            }
+
         following = self._is_following(
             self.viewer_id,
             self.target_id,

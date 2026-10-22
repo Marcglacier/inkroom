@@ -22,6 +22,11 @@ from app.inbox.services.messages.message_status import get_message_status
 from app.infrastructure.celery.tasks import (
     fetch_message_link_preview_task,
 )
+from app.inbox.services.messages.read_receipt_policy import (
+    ReadReceiptPolicy,
+)
+from app.models.settings.user_restriction import UserRestriction
+from app.inbox.services.settings.blocks.block_policy import BlockPolicy
 
 def send_message(
     sender_id,
@@ -39,6 +44,9 @@ def send_message(
     if not receiver:
         return {"error": "This account no longer exists"}, 404
 
+    if BlockPolicy.blocks_either_user(sender_id, receiver_id):
+        return {"error": "Messaging is unavailable"}, 403
+
     convo = ConversationService.get_or_create(
         sender_id,
         receiver_id,
@@ -54,6 +62,15 @@ def send_message(
             return {
                 "error": "Cannot reply to message in another conversation"
             }, 400
+
+        if (
+            parent.sender_id is not None
+            and BlockPolicy.blocks_either_user(
+                sender_id,
+                parent.sender_id,
+            )
+        ):
+            return {"error": "Replying is unavailable"}, 403
 
     msg = Message(
         conversation_id=convo.id,
@@ -81,7 +98,7 @@ def send_message(
             files,
             media_kind_override=media_kind,
         )
-    
+
     # ============================================================
     # LINK DETECTION
     # ============================================================
@@ -105,7 +122,7 @@ def send_message(
                 normalized_url=normalized,
             )
 
-            db.session.add(link)    
+            db.session.add(link)
     # ============================================================
     # SAVE MESSAGE
     # ============================================================
@@ -130,9 +147,8 @@ def send_message(
     # MESSAGE STATUS
     # ============================================================
 
-    status, online, in_chat = get_message_status(
+    status, _ = get_message_status(
         receiver_id,
-        convo.id,
         convo.status,
     )
 
@@ -177,11 +193,30 @@ def send_message(
 
     emit_conversation_updated(convo.id)
 
+    # Notify the restricter about incoming restricted messages
+    restriction = UserRestriction.query.filter_by(
+        restricter_id=receiver_id,
+        restricted_id=sender_id,
+    ).first()
+
+    if restriction and convo.status == "active":
+        socketio.emit(
+            "message_requests:updated",
+            {
+                "type": "restricted_message",
+                "conversation_id": convo.id,
+            },
+            room=f"user_{receiver_id}",
+        )
+
     socketio.emit(
         "message:status",
         {
+            "conversation_id": convo.id,
             "message_id": msg.id,
-            "status": msg.status,
+            "status": ReadReceiptPolicy(
+                convo.id
+            ).message_status(msg),
         },
         room=f"user_{sender_id}",
     )

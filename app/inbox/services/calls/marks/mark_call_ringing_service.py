@@ -11,7 +11,7 @@ from app.inbox.constants.calls import (
 from app.inbox.services.conversations.core.conversation_guard import (
     ConversationGuard,
 )
-
+from app.inbox.services.settings.blocks.block_policy import BlockPolicy
 
 class MarkCallRingingService:
 
@@ -56,6 +56,14 @@ class MarkCallRingingService:
                 description="Only the caller can mark this call as ringing.",
             )
 
+        if BlockPolicy.blocks_either_user(
+            call.caller_id,
+            call.receiver_id,
+        ):
+            abort(
+                403,
+                description="Calling is unavailable.",
+            )
         print(
             "📞 SERVICE CALL STATE:",
             {
@@ -65,6 +73,7 @@ class MarkCallRingingService:
                 "receiver_id": call.receiver_id,
             }
         )
+
         # ========================================================
         # VALIDATE CURRENT STATE
         # ========================================================

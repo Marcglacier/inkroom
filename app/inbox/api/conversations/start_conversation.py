@@ -3,7 +3,7 @@ from flask.views import MethodView
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from app.models.user import User
 from app.extensions import db
-
+from app.extensions import db, socketio
 from app.inbox.models.conversations.conversation import Conversation
 from app.inbox.models.conversations.conversation_request import ConversationRequest
 
@@ -54,7 +54,7 @@ class StartConversationAPI(MethodView):
             db.session.commit()
 
             return { "conversation_id": conversation.id,  "status": conversation.status, }, 200
-    
+
         # =========================
         # CHECK MUTUAL STATUS
         # =========================
@@ -108,6 +108,11 @@ class StartConversationAPI(MethodView):
         db.session.add(request)
         db.session.commit()
 
+        socketio.emit(
+            "message_requests:updated",
+            {"type": "new_request"},
+            room=f"user_{user_id}",
+        )
         return {
             "conversation_id": conversation.id,
             "status": "pending"
